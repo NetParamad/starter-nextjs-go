@@ -114,8 +114,6 @@ Current implementation:
 
 - `frontend/src/components/ui/input.tsx`
 - `frontend/src/components/ui/label.tsx`
-- `frontend/src/components/ui/textarea.tsx`
-- `frontend/src/components/ui/select.tsx`
 - `frontend/src/features/auth/components/auth-form-shell.tsx`
 - `frontend/src/features/auth/components/auth-split-shell.tsx`
 - `frontend/src/features/auth/components/auth-centered-shell.tsx`

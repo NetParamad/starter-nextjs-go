@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const demoEmail =
-  process.env.PLAYWRIGHT_DEMO_EMAIL ?? "demo@nextjs-go-kit.local";
+const demoEmail = process.env.PLAYWRIGHT_DEMO_EMAIL ?? "demo@nextjs-go.local";
 const demoPassword = process.env.PLAYWRIGHT_DEMO_PASSWORD ?? "demo12345";
 
 test.describe("starter smoke flows", () => {
@@ -44,6 +43,7 @@ test.describe("starter smoke flows", () => {
 
   test("logs in with the demo account and opens the owner dashboard", async ({
     page,
+    isMobile,
   }) => {
     await page.goto("/login");
 
@@ -51,8 +51,10 @@ test.describe("starter smoke flows", () => {
     await page.getByLabel("Password").fill(demoPassword);
     await page.getByRole("button", { name: "Login" }).click();
 
-    const primaryNav = page.getByLabel("Primary");
-    const dashboardNavLink = primaryNav.getByRole("link", {
+    const nav = isMobile
+      ? page.getByRole("navigation", { name: "Mobile" })
+      : page.getByLabel("Primary");
+    const dashboardNavLink = nav.getByRole("link", {
       name: "Dashboard",
     });
 

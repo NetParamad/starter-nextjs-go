@@ -16,6 +16,7 @@ var (
 	ErrUserConflict                   = errors.New("user already exists")
 	ErrPasswordResetTokenNotFound     = errors.New("password reset token not found")
 	ErrEmailVerificationTokenNotFound = errors.New("email verification token not found")
+	ErrRefreshTokenNotFound           = errors.New("refresh token not found")
 )
 
 type UserRepository struct {
@@ -32,6 +33,15 @@ type PasswordResetToken struct {
 }
 
 type EmailVerificationToken struct {
+	ID        string
+	UserID    string
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
+}
+
+type RefreshToken struct {
 	ID        string
 	UserID    string
 	TokenHash string
@@ -158,6 +168,61 @@ func (r UserRepository) MarkPasswordResetTokenUsed(ctx context.Context, id strin
 		SET used_at = $2
 		WHERE id = $1
 	`, id, time.Now().UTC())
+	return err
+}
+
+func (r UserRepository) CreateRefreshToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time, userAgent, ipAddress string) error {
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO user_sessions (user_id, refresh_token_hash, user_agent, ip_address, expires_at)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, '')::inet, $5)
+	`, userID, tokenHash, userAgent, ipAddress, expiresAt.UTC())
+	return err
+}
+
+func (r UserRepository) FindActiveRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT id, user_id, refresh_token_hash, expires_at, revoked_at, created_at
+		FROM user_sessions
+		WHERE refresh_token_hash = $1
+		  AND revoked_at IS NULL
+		  AND expires_at > NOW()
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, tokenHash)
+
+	var item RefreshToken
+	err := row.Scan(
+		&item.ID,
+		&item.UserID,
+		&item.TokenHash,
+		&item.ExpiresAt,
+		&item.UsedAt,
+		&item.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return RefreshToken{}, ErrRefreshTokenNotFound
+		}
+		return RefreshToken{}, err
+	}
+
+	return item, nil
+}
+
+func (r UserRepository) MarkRefreshTokenUsed(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE user_sessions
+		SET revoked_at = $2
+		WHERE id = $1
+	`, id, time.Now().UTC())
+	return err
+}
+
+func (r UserRepository) DeleteRefreshTokensByUserID(ctx context.Context, userID string) error {
+	_, err := r.db.Exec(ctx, `
+		DELETE FROM user_sessions
+		WHERE user_id = $1
+	`, userID)
 	return err
 }
 

@@ -12,7 +12,7 @@ analytics endpoints, PostgreSQL support, and SQL migrations.
 
 ## Structure
 
-`cmd/api`, `docs`, `internal`, and `migrations`
+`cmd/api`, `internal`, and `migrations`
 
 ## Quick Start
 
@@ -31,7 +31,14 @@ GET /health
 GET  /health
 POST /api/v1/auth/register
 POST /api/v1/auth/login
+POST /api/v1/auth/verify-email
+POST /api/v1/auth/resend-verification
+POST /api/v1/auth/forgot-password
+POST /api/v1/auth/reset-password
+POST /api/v1/auth/refresh
+POST /api/v1/auth/logout
 GET  /api/v1/auth/me
+GET  /api/v1/analytics/overview (owner only)
 ```
 
 `/api/v1/auth/me` expects:
@@ -61,16 +68,21 @@ Notes:
 - `PORT` is supported automatically for Railway/Render/Fly-style platforms.
 - `CORS_ALLOWED_ORIGINS` should include your frontend app URL.
 - the server now starts with graceful shutdown, request IDs, and basic security headers by default.
+- public auth endpoints are rate-limited (20 requests/minute per IP, in-memory; put an edge limiter in front for multi-replica deployments).
+- production refuses to boot with placeholder `JWT_ACCESS_SECRET` (`ValidateProduction`).
 - demo seeding can provision a ready-to-use account for local development.
 
 ## Database
 
-Core schema is defined in:
+Core schema is defined in `migrations/` (`*.up.sql` / `*.down.sql` pairs,
+currently `000001`–`000004`).
 
-- `migrations/000001_init_schema.up.sql`
-- `migrations/000001_init_schema.down.sql`
+Apply all pending migrations before starting the API in production (the API
+runs them automatically on boot via `RunMigrations`).
 
-Apply the migration before starting the API in production.
+Migration SQL lives in two synced copies: `migrations/` (for manual
+deploys) and `internal/repository/migrations/` (embedded into the binary).
+Keep both identical when adding a migration.
 
 ## Deploying
 
@@ -84,7 +96,7 @@ Suggested flow:
 1. Copy this backend directory into its own repository.
 2. Push the repo.
 3. Provision PostgreSQL.
-4. Run `migrations/000001_init_schema.up.sql` on that database.
+4. Run every `migrations/*.up.sql` file in order on that database.
 5. Set the environment variables listed above.
 6. Deploy using the included `Dockerfile` or native Go buildpack support.
 7. Point the frontend to `https://your-api-host.com/api/v1`.

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,10 +25,33 @@ func NewPostgresPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, err
 		return nil, err
 	}
 
-	if err := pool.Ping(ctx); err != nil {
+	if err := pingWithRetry(ctx, pool); err != nil {
 		pool.Close()
 		return nil, err
 	}
 
 	return pool, nil
+}
+
+// pingWithRetry tolerates a database that is still booting (e.g. a fresh
+// `docker compose up`), instead of failing the process on the first refused
+// connection.
+func pingWithRetry(ctx context.Context, pool *pgxpool.Pool) error {
+	const maxAttempts = 15
+	const delay = 2 * time.Second
+
+	var err error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err = pool.Ping(ctx); err == nil {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+
+	return fmt.Errorf("postgres not reachable after %d attempts: %w", maxAttempts, err)
 }

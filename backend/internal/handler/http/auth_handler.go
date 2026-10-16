@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"net"
 	"net/http"
 
 	"github.com/netparamad/template-nextjs-go/backend/internal/domain"
@@ -47,7 +48,7 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.Login(r.Context(), input)
+	response, err := h.service.Login(r.Context(), input, sessionMetaFromRequest(r))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidInput):
@@ -147,6 +148,56 @@ func (h AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var input domain.RefreshInput
+	if err := readJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	response, err := h.service.Refresh(r.Context(), input, sessionMetaFromRequest(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidInput):
+			writeError(w, http.StatusBadRequest, "refresh token is required")
+		case errors.Is(err, service.ErrInvalidCredentials):
+			writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to refresh session")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (h AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var input domain.LogoutInput
+	if err := readJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.service.Logout(r.Context(), input); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to log out")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func sessionMetaFromRequest(r *http.Request) service.SessionMeta {
+	ip := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		ip = host
+	}
+
+	return service.SessionMeta{
+		UserAgent: r.UserAgent(),
+		IPAddress: ip,
+	}
 }
 
 func (h AuthHandler) Me(w http.ResponseWriter, r *http.Request) {

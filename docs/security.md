@@ -29,5 +29,5 @@ Reports are most helpful when they focus on:
 
 This template also ships with:
 
-- CodeQL scanning for JavaScript/TypeScript, Go, and GitHub Actions workflows
+- CodeQL scanning for JavaScript/TypeScript and Go
 - tracked-git secret scanning with `gitleaks`

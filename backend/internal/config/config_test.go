@@ -20,6 +20,24 @@ func TestGetEnvAsSliceTrimsValues(t *testing.T) {
 	}
 }
 
+func TestValidateProductionRejectsPlaceholderSecret(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("JWT_ACCESS_SECRET", "change-me-access")
+
+	if err := Load().ValidateProduction(); err == nil {
+		t.Fatal("expected placeholder secret to be rejected in production")
+	}
+}
+
+func TestValidateProductionAllowsDevelopmentDefaults(t *testing.T) {
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("JWT_ACCESS_SECRET", "change-me-access")
+
+	if err := Load().ValidateProduction(); err != nil {
+		t.Fatalf("expected development defaults to pass, got %v", err)
+	}
+}
+
 func TestLoadUsesConfiguredAppName(t *testing.T) {
 	t.Setenv("APP_NAME", "Template Next.js Go API")
 

@@ -18,7 +18,7 @@ export function useDashboardPageState() {
   const ownerEmail = getDashboardOwnerEmail();
 
   const analyticsQuery = useQuery<AnalyticsOverview>({
-    queryKey: ["dashboard", "analytics-overview"],
+    queryKey: ["dashboard", "analytics-overview", accessToken],
     queryFn: () => getAnalyticsOverview(accessToken as string),
     enabled: Boolean(accessToken) && showOwnerDashboard,
   });

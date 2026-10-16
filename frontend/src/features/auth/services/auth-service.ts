@@ -6,6 +6,9 @@ import type {
   AuthUser,
   ForgotPasswordInput,
   LoginInput,
+  LogoutInput,
+  RefreshInput,
+  RefreshResponse,
   RegisterResponse,
   RegisterInput,
   ResendVerificationInput,
@@ -20,6 +23,7 @@ function toSession(response: AuthResponse): AuthSession {
   return {
     accessToken: response.access_token,
     expiresAt: response.expires_at,
+    refreshToken: response.refresh_token,
     user: response.user,
   };
 }
@@ -81,6 +85,35 @@ export async function register(
   });
 
   return parseJson<RegisterResponse>(response);
+}
+
+export async function refreshSession(
+  input: RefreshInput,
+): Promise<AuthSession> {
+  const response = await fetch(buildApiUrl("/auth/refresh"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  return toSession(await parseJson<RefreshResponse>(response));
+}
+
+export async function logout(input: LogoutInput): Promise<void> {
+  const response = await fetch(buildApiUrl("/auth/logout"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok && response.status !== 404) {
+    await parseJson<unknown>(response).catch(() => null);
+    throw new Error(`Request failed with status ${response.status}`);
+  }
 }
 
 export async function getCurrentUser(accessToken: string): Promise<AuthUser> {

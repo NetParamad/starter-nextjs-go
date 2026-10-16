@@ -53,10 +53,20 @@ type ResendVerificationInput struct {
 }
 
 type AuthResponse struct {
-	AccessToken string    `json:"access_token"`
-	TokenType   string    `json:"token_type"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	User        User      `json:"user"`
+	AccessToken      string    `json:"access_token"`
+	TokenType        string    `json:"token_type"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	RefreshToken     string    `json:"refresh_token"`
+	RefreshExpiresAt time.Time `json:"refresh_expires_at"`
+	User             User      `json:"user"`
+}
+
+type RefreshInput struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type LogoutInput struct {
+	RefreshToken string `json:"refresh_token"`
 }
 
 type RegisterResponse struct {

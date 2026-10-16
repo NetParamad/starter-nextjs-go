@@ -5,9 +5,9 @@ export default function SignUpPage() {
     <AuthFormShell
       mode="signup"
       title="Create your account"
-      description="Daftar untuk mulai belajar dengan alur yang lebih ringan, cepat, dan menyenangkan."
+      description="Create an account to unlock the dashboard and protected starter flows."
       submitLabel="Sign up"
-      footerText="Sudah punya akun?"
+      footerText="Already have an account?"
       footerLinkLabel="Login"
       footerLinkHref="/login"
       fields={[

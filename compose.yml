@@ -17,5 +17,37 @@ services:
       timeout: 5s
       retries: 10
 
+  # Full-stack profile for prod-like local runs:
+  # docker compose --profile prod up --build
+  backend:
+    build: ./backend
+    profiles: ["prod"]
+    container_name: template-nextjs-go-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      DB_HOST: postgres
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+    profiles: ["prod"]
+    container_name: template-nextjs-go-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+
 volumes:
   template-nextjs-go-postgres-data:

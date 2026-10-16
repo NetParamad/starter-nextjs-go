@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import path from "node:path";
@@ -36,7 +36,9 @@ function runSync(command, args, options = {}) {
     if (options.captureOutput && result.stderr) {
       process.stderr.write(result.stderr);
     }
-    throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
+    throw new Error(
+      `${command} ${args.join(" ")} failed with exit code ${result.status}`,
+    );
   }
 
   return result;
@@ -49,6 +51,9 @@ function runBackground(command, args, options = {}) {
     stdio: "inherit",
     cwd: options.cwd ?? root,
     env: options.env ?? process.env,
+    // New process group per child so cleanup can kill the whole tree
+    // (e.g. `go run` wrappers and the API binary they spawn).
+    detached: process.platform !== "win32",
   });
 
   startedChildren.push(child);
@@ -59,7 +64,11 @@ function getBaseUrl(port) {
   return `http://${smokeHost}:${port}`;
 }
 
-function createSmokeBackendEnv({ backendPort, backendBaseUrl, frontendBaseUrl }) {
+function createSmokeBackendEnv({
+  backendPort,
+  backendBaseUrl,
+  frontendBaseUrl,
+}) {
   return {
     APP_NAME: "Template Next.js Go API",
     APP_ENV: "development",
@@ -75,9 +84,9 @@ function createSmokeBackendEnv({ backendPort, backendBaseUrl, frontendBaseUrl })
     DB_PASSWORD: "db_password",
     DB_SSLMODE: "disable",
     DB_SCHEMA: "public",
-    DASHBOARD_OWNER_EMAIL: "demo@nextjs-go-kit.local",
+    DASHBOARD_OWNER_EMAIL: "demo@nextjs-go.local",
     DEMO_SEED_ENABLED: "true",
-    DEMO_USER_EMAIL: "demo@nextjs-go-kit.local",
+    DEMO_USER_EMAIL: "demo@nextjs-go.local",
     DEMO_USER_PASSWORD: "demo12345",
     DEMO_USER_USERNAME: "nextjs-go-demo",
     DEMO_USER_FULL_NAME: "Next.js Go Demo",
@@ -90,22 +99,33 @@ function createSmokeFrontendEnv({ backendBaseUrl }) {
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
     NEXT_PUBLIC_API_BASE_URL: `${backendBaseUrl}/api/v1`,
-    NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL: "demo@nextjs-go-kit.local",
+    NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL: "demo@nextjs-go.local",
     NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "",
     NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC: "",
-    NEXT_PUBLIC_DEMO_EMAIL: "demo@nextjs-go-kit.local",
+    NEXT_PUBLIC_DEMO_EMAIL: "demo@nextjs-go.local",
     NEXT_PUBLIC_DEMO_PASSWORD: "demo12345",
   };
 }
 
+function assertAlive(child, label) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    throw new Error(
+      `${label} exited early with code ${child.exitCode ?? child.signalCode}`,
+    );
+  }
+}
+
 function findAvailablePort(preferredPort) {
+  // NOTE: probe the IPv6 wildcard, not 127.0.0.1. A server listening on
+  // :::port also answers 127.0.0.1, but a 127.0.0.1-only probe can still
+  // bind successfully on some systems and falsely report the port as free.
   const probePort = (port) =>
     new Promise((resolve, reject) => {
       const server = createServer();
 
       server.unref();
       server.once("error", () => resolve(null));
-      server.listen({ host: smokeHost, port }, () => {
+      server.listen({ host: "::", port }, () => {
         const address = server.address();
         const resolvedPort =
           typeof address === "object" && address ? address.port : port;
@@ -135,7 +155,10 @@ function findAvailablePort(preferredPort) {
   });
 }
 
-async function waitFor(check, { label, timeoutMs = 120000, intervalMs = 1500 }) {
+async function waitFor(
+  check,
+  { label, timeoutMs = 120000, intervalMs = 1500 },
+) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
@@ -158,8 +181,13 @@ function removePostgresContainer() {
     encoding: "utf8",
   });
 
-  if (result.status !== 0 && !`${result.stderr ?? ""}`.includes("No such container")) {
-    throw new Error("Unable to remove the disposable Playwright Postgres container.");
+  if (
+    result.status !== 0 &&
+    !`${result.stderr ?? ""}`.includes("No such container")
+  ) {
+    throw new Error(
+      "Unable to remove the disposable Playwright Postgres container.",
+    );
   }
 }
 
@@ -240,7 +268,11 @@ function terminateChild(child) {
     return;
   }
 
-  child.kill("SIGTERM");
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill("SIGTERM");
+  }
 }
 
 let isCleaningUp = false;
@@ -268,7 +300,10 @@ async function main() {
     path.join(frontendDir, ".env.local"),
     path.join(frontendDir, ".env.example"),
   );
-  ensureFile(path.join(backendDir, ".env"), path.join(backendDir, ".env.example"));
+  ensureFile(
+    path.join(backendDir, ".env"),
+    path.join(backendDir, ".env.example"),
+  );
 
   const backendPort = await findAvailablePort(8080);
   const frontendPort = await findAvailablePort(3000);
@@ -291,7 +326,7 @@ async function main() {
   await waitForPostgres();
 
   console.log("Starting backend API...");
-  runBackground("go", ["run", "./cmd/api"], {
+  const backendChild = runBackground("go", ["run", "./cmd/api"], {
     cwd: backendDir,
     env: {
       ...process.env,
@@ -299,6 +334,7 @@ async function main() {
     },
   });
   await waitForUrl(`${backendBaseUrl}/health`, "backend health endpoint");
+  assertAlive(backendChild, "backend API");
 
   console.log("Building frontend for browser tests...");
   runSync("npm", ["exec", "--", "next", "build"], {
@@ -309,18 +345,37 @@ async function main() {
     },
   });
   console.log("Starting frontend app...");
-  runBackground(
-    "npm",
-    ["run", "start", "--", "--hostname", smokeHost, "--port", String(frontendPort)],
-    {
-      cwd: frontendDir,
-      env: {
-        ...process.env,
-        ...smokeFrontendEnv,
-      },
+  // NOTE: with outputFileTracingRoot at the monorepo root, the standalone
+  // server nests under standalone/frontend/ instead of the standalone root.
+  const standaloneServer = [
+    ".next/standalone/server.js",
+    ".next/standalone/frontend/server.js",
+  ].find((candidate) => existsSync(path.join(frontendDir, candidate)));
+
+  if (!standaloneServer) {
+    throw new Error(
+      "Standalone frontend server not found. Did the production build succeed?",
+    );
+  }
+
+  // NOTE: the nested standalone tree ships no static assets; sync them in so
+  // the server can serve /_next/static/* by itself.
+  console.log("Syncing static assets into the standalone server...");
+  cpSync(path.join(frontendDir, ".next", "static"), path.join(frontendDir, ".next", "standalone", "frontend", ".next", "static"), {
+    recursive: true,
+  });
+
+  const frontendChild = runBackground("node", [standaloneServer], {
+    cwd: frontendDir,
+    env: {
+      ...process.env,
+      ...smokeFrontendEnv,
+      PORT: String(frontendPort),
+      HOSTNAME: smokeHost,
     },
-  );
+  });
   await waitForUrl(`${frontendBaseUrl}/login`, "frontend login page");
+  assertAlive(frontendChild, "frontend app");
 
   console.log("Running Playwright smoke tests...");
   runSync("npm", ["run", "e2e:test"], {
@@ -328,10 +383,9 @@ async function main() {
     env: {
       ...process.env,
       ...smokeFrontendEnv,
-      PLAYWRIGHT_BASE_URL:
-        process.env.PLAYWRIGHT_BASE_URL ?? frontendBaseUrl,
+      PLAYWRIGHT_BASE_URL: process.env.PLAYWRIGHT_BASE_URL ?? frontendBaseUrl,
       PLAYWRIGHT_DEMO_EMAIL:
-        process.env.PLAYWRIGHT_DEMO_EMAIL ?? "demo@nextjs-go-kit.local",
+        process.env.PLAYWRIGHT_DEMO_EMAIL ?? "demo@nextjs-go.local",
       PLAYWRIGHT_DEMO_PASSWORD:
         process.env.PLAYWRIGHT_DEMO_PASSWORD ?? "demo12345",
     },

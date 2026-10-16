@@ -3,9 +3,14 @@
   "private": true,
   "version": "1.2.0",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:down": "docker compose down",
+    "prod": "docker compose --profile prod up --build",
+    "prod:down": "docker compose --profile prod down",
     "api:types": "openapi-typescript ./docs/openapi.yaml -o ./frontend/src/generated/openapi.ts",
     "check:contract": "node scripts/check-contract-drift.mjs",
     "check:workflows": "node scripts/check-actionlint.mjs",

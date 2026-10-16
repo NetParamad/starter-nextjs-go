@@ -56,7 +56,11 @@ npm run typecheck
 NEXT_PUBLIC_APP_NAME=Template Next.js Go
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
-NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL=demo@nextjs-go-kit.local
+NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL=demo@nextjs-go.local
+NEXT_PUBLIC_PLAUSIBLE_DOMAIN=localhost
+NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC=https://plausible.io/js/script.js
+NEXT_PUBLIC_DEMO_EMAIL=demo@nextjs-go.local
+NEXT_PUBLIC_DEMO_PASSWORD=demo12345
 ```
 
 The template now includes:
@@ -67,7 +71,7 @@ The template now includes:
 - polished global `loading`, `error`, and `not-found` app states
 - demo credentials surfaced on the login screen for local development
 - in-memory auth session storage so access tokens are not persisted across browser refreshes
-- Vitest coverage for frontend utility and component behavior
+- Vitest coverage for frontend utility behavior
 - Playwright smoke coverage for live browser flows against the full stack
 
 ## Quality Tooling

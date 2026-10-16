@@ -124,7 +124,7 @@ func Load() Config {
 		},
 		Demo: DemoConfig{
 			SeedEnabled: getEnvAsBool("DEMO_SEED_ENABLED", false),
-			Email:       strings.ToLower(strings.TrimSpace(getEnv("DEMO_USER_EMAIL", "demo@nextjs-go-kit.local"))),
+			Email:       strings.ToLower(strings.TrimSpace(getEnv("DEMO_USER_EMAIL", "demo@nextjs-go.local"))),
 			Password:    getEnv("DEMO_USER_PASSWORD", "demo12345"),
 			Username:    strings.TrimSpace(getEnv("DEMO_USER_USERNAME", "nextjs-go-demo")),
 			FullName:    strings.TrimSpace(getEnv("DEMO_USER_FULL_NAME", "Next.js Go Demo")),
@@ -134,6 +134,24 @@ func Load() Config {
 
 func (c Config) Address() string {
 	return fmt.Sprintf("%s:%d", c.App.Host, c.App.Port)
+}
+
+// ValidateProduction refuses to boot a production environment with
+// placeholder secrets. Development keeps the convenient defaults.
+func (c Config) ValidateProduction() error {
+	if !strings.EqualFold(strings.TrimSpace(c.App.Env), "production") {
+		return nil
+	}
+
+	if strings.TrimSpace(c.JWT.AccessSecret) == "" || c.JWT.AccessSecret == "change-me-access" {
+		return fmt.Errorf("JWT_ACCESS_SECRET must be set to a real secret in production")
+	}
+
+	if strings.TrimSpace(c.JWT.RefreshSecret) == "" || c.JWT.RefreshSecret == "change-me-refresh" {
+		return fmt.Errorf("JWT_REFRESH_SECRET must be set to a real secret in production")
+	}
+
+	return nil
 }
 
 func (c Config) DatabaseURL() string {

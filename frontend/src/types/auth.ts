@@ -7,8 +7,13 @@ export type RegisterResponse = components["schemas"]["RegisterResponse"];
 export type AuthSession = {
   accessToken: string;
   expiresAt: string;
+  refreshToken: string;
   user: AuthUser;
 };
+
+export type RefreshInput = components["schemas"]["RefreshInput"];
+export type LogoutInput = components["schemas"]["LogoutInput"];
+export type RefreshResponse = components["schemas"]["AuthResponse"];
 
 export type LoginInput = components["schemas"]["LoginInput"];
 export type RegisterInput = components["schemas"]["RegisterInput"];

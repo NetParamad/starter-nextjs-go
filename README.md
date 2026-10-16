@@ -1,13 +1,16 @@
 # template-nextjs-go
 
-[![npm version](https://img.shields.io/npm/v/%40netparamad%2Ftemplate-nextjs-go)](https://www.npmjs.com/package/@netparamad/template-nextjs-go) [![npm downloads](https://img.shields.io/npm/dm/%40netparamad%2Ftemplate-nextjs-go)](https://www.npmjs.com/package/@netparamad/template-nextjs-go) [![license](https://img.shields.io/npm/l/%40netparamad%2Ftemplate-nextjs-go)](https://www.npmjs.com/package/@netparamad/template-nextjs-go)
+[![license](https://img.shields.io/github/license/netparamad/template-nextjs-go)](./LICENSE)
 
-Create a project directly from npm:
+Start a project from this template:
 
 ```bash
-npx @netparamad/template-nextjs-go my-go-app
+git clone https://github.com/netparamad/template-nextjs-go my-app
+cd my-app
+npm run dev
 ```
 
+Then follow the [rename guide](./docs/rename.md) to rebrand it.
 
 [![Template CI](https://github.com/netparamad/template-nextjs-go/actions/workflows/template-ci.yml/badge.svg)](https://github.com/netparamad/template-nextjs-go/actions/workflows/template-ci.yml)
 [![E2E](https://github.com/netparamad/template-nextjs-go/actions/workflows/e2e.yml/badge.svg)](https://github.com/netparamad/template-nextjs-go/actions/workflows/e2e.yml)
@@ -53,7 +56,7 @@ Backend: `http://localhost:8080`
 
 ## Demo Account
 
-- email: `demo@nextjs-go-kit.local`
+- email: `demo@nextjs-go.local`
 - password: `demo12345`
 
 ## Commands
@@ -61,6 +64,8 @@ Backend: `http://localhost:8080`
 ```bash
 npm run dev
 npm run dev:down
+npm run prod
+npm run prod:down
 npm run api:types
 npm run check:contract
 npm run check:workflows
@@ -82,7 +87,7 @@ npm run e2e
 - modern stack: Next.js 16, React 19, Tailwind CSS 4, TypeScript 5.9, and Go
 - full-stack by default: frontend, backend, Dockerized PostgreSQL, and shared root scripts
 - safer defaults: in-memory auth tokens and stricter password-reset handling
-- stronger quality gates: strict ESLint, Prettier, Vitest utility and component tests, production build checks, Go test, and Go build
+- stronger quality gates: strict ESLint, Prettier, Vitest utility tests, production build checks, Go test, and Go build
 - maintainer guardrails: contract drift checks, workflow lint, secret scan, and Dependabot
 - security visibility: CodeQL and tracked-content secret scanning
 - end-to-end confidence: Playwright smoke tests that boot the full local stack
@@ -94,7 +99,7 @@ npm run e2e
 - auth flows with register, login, email verification, and password reset
 - protected dashboard and analytics-ready frontend patterns
 - Dockerized local database setup
-- lint, format check, utility tests, component tests, Playwright smoke tests, production build, Go test, and Go build checks
+- lint, format check, utility tests, Playwright smoke tests, production build, Go test, and Go build checks
 - focused GitHub Actions validation
 
 ## Notes
@@ -120,3 +125,5 @@ npm run e2e
 
 - [Security](./docs/security.md)
 - [docs/tooling.md](./docs/tooling.md)
+- [Rename guide](./docs/rename.md)
+- [Removing auth](./docs/remove-auth.md)

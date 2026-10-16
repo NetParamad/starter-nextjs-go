@@ -4,44 +4,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { featuredHighlights } from "@/lib/site-data";
-
-const landingHighlights = [
-  {
-    step: "01",
-    title: "Focused first impression",
-    description: "Clear hero copy with one dominant action path.",
-  },
-  {
-    step: "02",
-    title: "Ready to expand",
-    description:
-      "Supporting sections hint at the system now and can grow into a fuller marketing page later.",
-  },
-];
+import { siteCopy } from "@/lib/site-copy";
 
 export function AboutSection() {
-  const featuredCards = featuredHighlights.slice(0, 3);
+  const featuredCards = siteCopy.featuredHighlights.slice(0, 3);
 
   return (
     <section className="mx-auto w-full max-w-5xl px-4 py-16" id="about">
       <div className="mx-auto mb-10 grid max-w-2xl gap-3 text-center">
         <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-          Why it lands well
+          {siteCopy.about.eyebrow}
         </p>
         <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-          Focused on first impression, but still grounded in real product
-          structure.
+          {siteCopy.about.title}
         </h2>
-        <p className="text-muted-foreground">
-          This home page keeps centered clarity, then adds product framing and
-          reusable content blocks so the starter still feels useful once you
-          begin customizing it.
-        </p>
+        <p className="text-muted-foreground">{siteCopy.about.lead}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {landingHighlights.map(({ step, title, description }) => (
+        {siteCopy.about.highlights.map(({ step, title, description }) => (
           <Card key={step}>
             <CardHeader>
               <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">

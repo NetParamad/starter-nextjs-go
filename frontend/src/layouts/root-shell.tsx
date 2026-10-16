@@ -3,6 +3,7 @@ import { RouteContentFrame } from "@/components/route-content-frame";
 import { Providers } from "@/components/providers";
 import { RouteScrollReset } from "@/components/route-scroll-reset";
 import { SiteHeader } from "@/components/site-header";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 
 type RootShellProps = {
   children: ReactNode;
@@ -23,6 +24,8 @@ export function RootShell({ children }: RootShellProps) {
         <div className="flex-1">
           <RouteContentFrame>{children}</RouteContentFrame>
         </div>
+        <div aria-hidden className="h-[4.25rem] shrink-0 md:hidden" />
+        <MobileBottomNav />
       </div>
     </Providers>
   );

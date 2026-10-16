@@ -12,6 +12,38 @@ function ensureFile(targetPath, examplePath) {
   }
 }
 
+function waitForPostgres(timeoutMs = 60000) {
+  console.log("Waiting for Postgres to become ready...");
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const probe = spawnSync(
+      "docker",
+      [
+        "compose",
+        "exec",
+        "-T",
+        "postgres",
+        "pg_isready",
+        "-U",
+        "postgres",
+        "-d",
+        "app_db",
+      ],
+      { stdio: "pipe", shell: process.platform === "win32" },
+    );
+
+    if (probe.status === 0) {
+      console.log("Postgres is ready.");
+      return;
+    }
+
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+  }
+
+  console.error("Postgres did not become ready in time; starting anyway.");
+}
+
 function run(command, args, options = {}) {
   const child = spawn(command, args, {
     stdio: "inherit",
@@ -40,6 +72,8 @@ const compose = spawnSync("docker", ["compose", "up", "-d", "postgres"], {
 if (compose.status !== 0) {
   process.exit(compose.status ?? 1);
 }
+
+waitForPostgres();
 
 console.log("Starting Template Next.js Go frontend and backend...");
 const frontend = run("npm", ["run", "dev"], { cwd: path.join(root, "frontend") });

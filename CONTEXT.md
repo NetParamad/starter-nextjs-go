@@ -28,6 +28,14 @@ before proposing changes, and append new hard-to-reverse decisions here.
 | 2026-10-16 | Backend lint: golangci-lint v2 (no `fieldalignment`) | `fieldalignment` too strict for a template; fixed real `errcheck`/`gofmt`/`goimports` findings instead (incl. duplicate `embed` import). |
 | 2026-10-16 | Security: Dependabot (npm/gomod/actions) + CodeQL (js + go) + gitleaks in CI | Makes the README's claims true. |
 
+| 2026-10-16 | Landing/brand copy centralized in `frontend/src/lib/site-copy.ts`; rename checklist in `docs/rename.md` | Starting a new project means editing copy in one file and following one checklist. |
+| 2026-10-16 | Auth rate limit (20/min/IP, in-memory) + production fail-fast on placeholder JWT secret | Brute-force + misconfig guardrails; edge limiter still needed for multi-replica. |
+| 2026-10-16 | e2e runs `node .next/standalone/<nested>/server.js` (path probed) with static synced in; IPv6-wildcard port probe; group-kill cleanup | `outputFileTracingRoot` nests standalone output; old `next start` path 404'd all static assets. |
+| 2026-10-16 | Stateful refresh-token rotation in `user_sessions` (revoked_at, single-use) + silent frontend renew + revoke-on-logout/password-change | Reuses the original unused `user_sessions` table instead of a new one; in-memory session storage kept. |
+| 2026-10-16 | Sessions record user-agent + IP (`SessionMeta` threaded handler→service); `npm audit fix` to 0 vulns; pgx 5.11 | UA/IP columns finally used; audit fix surfaced a new eslint rule (fixed `error.tsx` router push). |
+| 2026-10-16 | Copy normalized to English; Node pinned (`≥22` + `.nvmrc`); prod compose profile; first component tests; auth removable via `registerAuthRoutes` + `docs/remove-auth.md` | Auth removal is documented deletion, not a runtime flag. |
+| 2026-10-16 | Standalone tracing root via `NEXT_STANDALONE_TRACING_ROOT` (flat in Docker, nested locally); compose ports configurable | Nesting dir depends on project dirname, so both layouts are probed, never hardcoded. |
+
 ## Conventions
 
 - Frontend styling: stock shadcn tokens only (`bg-background`,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { appConfig } from "@/lib/app-config";
+import { siteCopy } from "@/lib/site-copy";
 
 const footerLinks = [
   { href: "/", label: "Home" },
@@ -24,8 +25,7 @@ export function SiteFooter() {
             </strong>
           </div>
           <p className="text-muted-foreground text-sm">
-            A full-stack starter with a Next.js frontend, Go API, and auth-first
-            flows you can reshape into your own product.
+            {siteCopy.footer.tagline}
           </p>
           <p className="text-muted-foreground text-xs">
             API host: {appConfig.url.host}
@@ -51,10 +51,10 @@ export function SiteFooter() {
       <div className="border-t">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4">
           <p className="text-muted-foreground text-xs">
-            © {year} {appConfig.name}. Built to become your product.
+            © {year} {appConfig.name}. {siteCopy.footer.bottomNote}
           </p>
           <p className="text-muted-foreground text-xs">
-            Next.js UI · Go API · Auth and owner flows
+            {siteCopy.footer.stackNote}
           </p>
         </div>
       </div>

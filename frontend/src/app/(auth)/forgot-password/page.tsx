@@ -5,9 +5,9 @@ export default function ForgotPasswordPage() {
     <AuthFormShell
       mode="forgot-password"
       title="Reset password"
-      description="Masukkan email akunmu, lalu kami akan kirim instruksi untuk membuat password baru."
+      description="Enter your account email and we will send instructions to create a new password."
       submitLabel="Send email"
-      footerText="Ingat password?"
+      footerText="Remember your password?"
       footerLinkLabel="Login"
       footerLinkHref="/login"
       fields={[

@@ -20,7 +20,7 @@ These are already part of the current starter or its immediate UI architecture.
 | React 19 | Installed | UI composition and app behavior | pairs with the App Router setup |
 | Tailwind CSS 4 | Installed | fast, consistent styling | theme tokens live in `frontend/src/app/globals.css` |
 | shadcn/ui pattern | Installed pattern | accessible, editable UI components | ideal for building your own system, not depending on a sealed package |
-| Radix UI primitives | Installed | accessible low-level UI behavior | currently used for things like dialogs, labels, selects, and slots |
+| Radix UI primitives | Installed | accessible low-level UI behavior | currently used for labels and slots |
 | Lucide React | Installed | clean icon set | best for most app UI icons |
 | TanStack Query | Installed | server state, caching, request lifecycle | use for API-backed screens |
 | Zustand | Installed | lightweight client state | good for local app state like auth/session UI state |
@@ -28,6 +28,7 @@ These are already part of the current starter or its immediate UI architecture.
 | tailwind-merge + clsx | Installed | safe class composition | helps keep component styles maintainable |
 | Vitest + Testing Library | Installed | unit/component testing | use for frontend behavior tests |
 | Playwright | Installed | end-to-end browser coverage | root `npm run e2e` boots the full stack |
+| openapi-typescript | Installed (root) | OpenAPI-to-TypeScript types | `npm run api:types`, drift-checked by `npm run check:contract` |
 
 ## Best Optional Additions
 
@@ -233,8 +234,9 @@ Recommendation:
 
 ### openapi-typescript
 
-- Best for generating TypeScript types from an OpenAPI contract.
-- Strong fit if you want the frontend to consume backend contracts more safely.
+- Already installed at the repo root: `npm run api:types` regenerates
+  `frontend/src/generated/openapi.ts` from `docs/openapi.yaml`, and
+  `npm run check:contract` fails CI on drift.
 - Official docs: https://openapi-ts.dev/
 
 ### oapi-codegen
@@ -246,7 +248,7 @@ Recommendation:
 Recommendation:
 
 - add `MSW` early if frontend/backend work often happens in parallel
-- adopt `openapi-typescript` and `oapi-codegen` together if you want a shared API contract workflow
+- adopt `oapi-codegen` if you want the Go side to join the existing contract workflow
 
 ## Database And Backend Developer Experience
 
@@ -332,7 +334,7 @@ If you do not want to overthink it, these combinations are sensible starting poi
 
 - add `Sentry`
 - add `TanStack Table`
-- consider contract tooling with `openapi-typescript` and `oapi-codegen`
+- consider `oapi-codegen` to extend the existing `openapi-typescript` contract workflow to Go
 - consider `WorkOS AuthKit` if enterprise auth is core
 - consider `Trigger.dev` for background workflows
 
@@ -378,10 +380,9 @@ When the app gets bigger, these are the next strongest additions:
 4. `nuqs`
 5. `sqlc`
 6. `Testcontainers for Go`
-7. `openapi-typescript`
-8. `oapi-codegen`
-9. `React Aria`
-10. `XState`
+7. `oapi-codegen`
+8. `React Aria`
+9. `XState`
 
 ## Related Docs
 

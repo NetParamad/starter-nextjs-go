@@ -32,19 +32,30 @@ func NewRouter(cfg config.Config, db *pgxpool.Pool) http.Handler {
 	analyticsHandler := httpHandler.NewAnalyticsHandler(analyticsService)
 
 	mux.HandleFunc("GET /health", healthHandler.Get)
-	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
-	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
-	mux.HandleFunc("POST /api/v1/auth/verify-email", authHandler.VerifyEmail)
-	mux.HandleFunc("POST /api/v1/auth/resend-verification", authHandler.ResendVerificationEmail)
-	mux.HandleFunc("POST /api/v1/auth/forgot-password", authHandler.ForgotPassword)
-	mux.HandleFunc("POST /api/v1/auth/reset-password", authHandler.ResetPassword)
-	mux.Handle("GET /api/v1/auth/me", authMiddleware(authService, http.HandlerFunc(authHandler.Me)))
+	registerAuthRoutes(mux, authService, authHandler)
 	mux.Handle(
 		"GET /api/v1/analytics/overview",
 		authMiddleware(authService, ownerOnlyMiddleware(cfg, userRepository, http.HandlerFunc(analyticsHandler.Overview))),
 	)
 
 	return withCORS(cfg, withSecurityHeaders(withRequestID(withLogging(mux))))
+}
+
+// registerAuthRoutes wires every auth endpoint in one place. Removing auth
+// from a project starts here: delete this call and the auth handler,
+// service, and token tables listed in docs/remove-auth.md.
+func registerAuthRoutes(mux *http.ServeMux, authService service.AuthService, authHandler httpHandler.AuthHandler) {
+	authLimiter := newRateLimiter(20, time.Minute)
+
+	mux.Handle("POST /api/v1/auth/register", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Register)))
+	mux.Handle("POST /api/v1/auth/login", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Login)))
+	mux.Handle("POST /api/v1/auth/verify-email", withRateLimit(authLimiter, http.HandlerFunc(authHandler.VerifyEmail)))
+	mux.Handle("POST /api/v1/auth/resend-verification", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ResendVerificationEmail)))
+	mux.Handle("POST /api/v1/auth/forgot-password", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ForgotPassword)))
+	mux.Handle("POST /api/v1/auth/reset-password", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ResetPassword)))
+	mux.Handle("POST /api/v1/auth/refresh", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Refresh)))
+	mux.Handle("POST /api/v1/auth/logout", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Logout)))
+	mux.Handle("GET /api/v1/auth/me", authMiddleware(authService, http.HandlerFunc(authHandler.Me)))
 }
 
 func withSecurityHeaders(next http.Handler) http.Handler {

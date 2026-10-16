@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ type GlobalErrorProps = {
 };
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
+  const router = useRouter();
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -34,7 +37,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => window.location.assign("/")}
+            onClick={() => router.push("/")}
           >
             Go home
           </Button>

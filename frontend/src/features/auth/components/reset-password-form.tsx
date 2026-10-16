@@ -70,14 +70,14 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   return (
     <AuthSplitShell
       badge="Password Reset"
-      heading="Buat password baru tanpa kehilangan momentum belajar."
-      description="Halaman ini tetap mempertahankan validasi dasar sambil siap dipasang ke backend nantinya."
+      heading="Create a new password to regain access."
+      description="This page keeps basic validation while staying ready for your own backend rules."
     >
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-2xl">Create new password</CardTitle>
           <CardDescription>
-            Gunakan password yang kuat dan mudah kamu kelola sendiri.
+            Use a strong password that you can manage yourself.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">

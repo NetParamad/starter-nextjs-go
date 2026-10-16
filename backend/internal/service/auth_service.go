@@ -35,6 +35,13 @@ type AuthService struct {
 	users repository.UserRepository
 }
 
+// SessionMeta carries request context worth recording alongside a
+// refresh-token session. Empty values are stored as NULL.
+type SessionMeta struct {
+	UserAgent string
+	IPAddress string
+}
+
 func NewAuthService(cfg config.Config, users repository.UserRepository) AuthService {
 	return AuthService{
 		cfg:   cfg,
@@ -92,7 +99,7 @@ func (s AuthService) Register(ctx context.Context, input domain.RegisterInput) (
 	}, nil
 }
 
-func (s AuthService) Login(ctx context.Context, input domain.LoginInput) (domain.AuthResponse, error) {
+func (s AuthService) Login(ctx context.Context, input domain.LoginInput, meta SessionMeta) (domain.AuthResponse, error) {
 	input.Email = strings.TrimSpace(strings.ToLower(input.Email))
 
 	if input.Email == "" || input.Password == "" {
@@ -124,7 +131,49 @@ func (s AuthService) Login(ctx context.Context, input domain.LoginInput) (domain
 		return domain.AuthResponse{}, err
 	}
 
-	return s.buildAuthResponse(refreshedUser)
+	return s.buildAuthResponse(ctx, refreshedUser, meta)
+}
+
+func (s AuthService) Refresh(ctx context.Context, input domain.RefreshInput, meta SessionMeta) (domain.AuthResponse, error) {
+	rawToken := strings.TrimSpace(input.RefreshToken)
+	if rawToken == "" {
+		return domain.AuthResponse{}, ErrInvalidInput
+	}
+
+	stored, err := s.users.FindActiveRefreshTokenByHash(ctx, hashResetToken(rawToken))
+	if err != nil {
+		if errors.Is(err, repository.ErrRefreshTokenNotFound) {
+			return domain.AuthResponse{}, ErrInvalidCredentials
+		}
+		return domain.AuthResponse{}, err
+	}
+
+	user, err := s.users.FindByID(ctx, stored.UserID)
+	if err != nil {
+		return domain.AuthResponse{}, ErrInvalidCredentials
+	}
+
+	// Rotate: the presented token is single-use, a fresh pair is minted below.
+	if err := s.users.MarkRefreshTokenUsed(ctx, stored.ID); err != nil {
+		return domain.AuthResponse{}, err
+	}
+
+	return s.buildAuthResponse(ctx, user, meta)
+}
+
+func (s AuthService) Logout(ctx context.Context, input domain.LogoutInput) error {
+	rawToken := strings.TrimSpace(input.RefreshToken)
+	if rawToken == "" {
+		return nil
+	}
+
+	stored, err := s.users.FindActiveRefreshTokenByHash(ctx, hashResetToken(rawToken))
+	if err != nil {
+		// Already used, expired, or unknown: logout stays idempotent.
+		return nil
+	}
+
+	return s.users.MarkRefreshTokenUsed(ctx, stored.ID)
 }
 
 func (s AuthService) Me(ctx context.Context, userID string) (domain.User, error) {
@@ -195,7 +244,12 @@ func (s AuthService) ResetPassword(ctx context.Context, input domain.ResetPasswo
 		return err
 	}
 
-	return s.users.DeleteActivePasswordResetTokensByUserID(ctx, resetToken.UserID)
+	if err := s.users.DeleteActivePasswordResetTokensByUserID(ctx, resetToken.UserID); err != nil {
+		return err
+	}
+
+	// A password change invalidates every existing session.
+	return s.users.DeleteRefreshTokensByUserID(ctx, resetToken.UserID)
 }
 
 func (s AuthService) VerifyEmail(ctx context.Context, input domain.VerifyEmailInput) error {
@@ -284,7 +338,7 @@ func (s AuthService) ParseAccessToken(tokenString string) (string, error) {
 	return subject, nil
 }
 
-func (s AuthService) buildAuthResponse(user domain.User) (domain.AuthResponse, error) {
+func (s AuthService) buildAuthResponse(ctx context.Context, user domain.User, meta SessionMeta) (domain.AuthResponse, error) {
 	expiresAt := time.Now().UTC().Add(time.Duration(s.cfg.JWT.AccessTTLMinutes) * time.Minute)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   user.ID,
@@ -299,13 +353,25 @@ func (s AuthService) buildAuthResponse(user domain.User) (domain.AuthResponse, e
 		return domain.AuthResponse{}, err
 	}
 
+	refreshToken, refreshTokenHash, err := generateResetToken()
+	if err != nil {
+		return domain.AuthResponse{}, err
+	}
+
+	refreshExpiresAt := time.Now().UTC().Add(time.Duration(s.cfg.JWT.RefreshTTLHours) * time.Hour)
+	if err := s.users.CreateRefreshToken(ctx, user.ID, refreshTokenHash, refreshExpiresAt, meta.UserAgent, meta.IPAddress); err != nil {
+		return domain.AuthResponse{}, err
+	}
+
 	user.PasswordHash = ""
 
 	return domain.AuthResponse{
-		AccessToken: signedToken,
-		TokenType:   "Bearer",
-		ExpiresAt:   expiresAt,
-		User:        user,
+		AccessToken:      signedToken,
+		TokenType:        "Bearer",
+		ExpiresAt:        expiresAt,
+		RefreshToken:     refreshToken,
+		RefreshExpiresAt: refreshExpiresAt,
+		User:             user,
 	}, nil
 }
 

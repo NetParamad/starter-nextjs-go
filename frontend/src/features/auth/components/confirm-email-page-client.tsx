@@ -39,22 +39,22 @@ export function ConfirmEmailPageClient({ email }: ConfirmEmailPageClientProps) {
           <CardTitle className="text-2xl">Confirm Your Email</CardTitle>
           <CardDescription>
             {email
-              ? `Kami sudah mengirim email verifikasi ke ${email}. Silakan cek Gmail kamu lalu klik link verifikasinya sebelum login.`
-              : "Kami sudah mengirim email verifikasi. Silakan cek Gmail kamu lalu klik link verifikasinya sebelum login."}
+              ? `We sent a verification email to ${email}. Check your inbox and click the verification link before logging in.`
+              : "We sent a verification email. Check your inbox and click the verification link before logging in."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           {resendMutation.isSuccess ? (
             <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
-              Email verifikasi sudah dikirim ulang. Cek inbox atau folder spam
-              kamu.
+              The verification email was resent. Check your inbox or spam
+              folder.
             </p>
           ) : null}
           {resendMutation.isError ? (
             <p className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm">
               {resendMutation.error instanceof Error
                 ? resendMutation.error.message
-                : "Gagal mengirim ulang email verifikasi."}
+                : "Failed to resend the verification email."}
             </p>
           ) : null}
 
