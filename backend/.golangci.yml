@@ -1,0 +1,17 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - ineffassign
+    - misspell
+    - unconvert
+    - unparam
+  disable:
+    - err113
+formatters:
+  enable:
+    - gofmt
+    - goimports

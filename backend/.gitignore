@@ -1,0 +1,16 @@
+# Build output (go build ./... drops the api binary in module root)
+api
+/template-nextjs-go-api
+
+# Env file generated from .env.example by scripts/dev.mjs
+.env
+
+# Test / coverage artifacts
+*.out
+coverage/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

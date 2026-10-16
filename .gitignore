@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Env files generated from *.example by scripts/dev.mjs
+.env
+.env.local
+.env.*.local
+
+# Test / report artifacts
+coverage/
+playwright-report/
+test-results/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
