@@ -1,5 +1,6 @@
-# Build output (go build ./... drops the api binary in module root)
-api
+# Build output (go build ./... drops the api binary in module root).
+# Leading slash keeps this from matching cmd/api/ (the server source).
+/api
 /template-nextjs-go-api
 
 # Env file generated from .env.example by scripts/dev.mjs
