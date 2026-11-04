@@ -1,391 +1,220 @@
-[English](README.md) | [ไทย](README.th.md)
+[EN](README.md) | [TH](README.th.md)
 
-# Template Next.js Go
+<h1 align="center">Template Next.js Go</h1>
 
-[![license](https://img.shields.io/github/license/netparamad/template-nextjs-go)](./LICENSE)
+<p align="center">
+  เทมเพลต monorepo แบบ full-stack สำหรับ Next.js, Go และ PostgreSQL
+</p>
 
-เทมเพลต monorepo แบบ full-stack ที่สร้างด้วย Next.js, Go และ PostgreSQL — ประกอบด้วยแอป frontend สมัยใหม่ พร้อม API แบบ Go ที่แยกเลเยอร์ชัดเจน ระบบ authentication, แดชบอร์ดแบบป้องกันการเข้าถึง, การพัฒนาในเครื่องผ่าน Docker และชุดตรวจสอบคุณภาพที่พร้อมสำหรับ CI
+<p align="center">
+  <a href="#ภาพรวม">ภาพรวม</a> ·
+  <a href="#ฟีเจอร์">ฟีเจอร์</a> ·
+  <a href="#เทคโนโลยีที่ใช้">เทคโนโลยี</a> ·
+  <a href="#โครงสร้างโปรเจกต์">โครงสร้าง</a> ·
+  <a href="#การตั้งค่าในเครื่อง">การตั้งค่าในเครื่อง</a> ·
+  <a href="#เริ่มต้นใช้งาน">เริ่มต้นใช้งาน</a> ·
+  <a href="#ตัวแปรสภาพแวดล้อม">ตัวแปรสภาพแวดล้อม</a> ·
+  <a href="#วิธีใช้งาน">วิธีใช้งาน</a> ·
+  <a href="#หมายเหตุ">หมายเหตุ</a>
+</p>
+
+---
 
 ## ภาพรวม
 
-เทมเพลตนี้ให้ประสบการณ์การพัฒนาแบบ frontend starter ที่ขัดเกลาแล้ว ผสานกับ backend แบบ Go ที่คำนึงถึงการใช้งานจริงในระดับ production พร้อม workflow แบบ monorepo ร่วมกัน และพฤติกรรม auth ที่ปลอดภัยกว่าโดยค่าเริ่มต้น
+Template Next.js Go เป็นเทมเพลต monorepo ที่มี frontend Next.js App Router, API Go แบบแยกเลเยอร์ และ PostgreSQL มาพร้อม auth ที่ใช้งานได้จริง แดชบอร์ดแบบ owner-only, API client แบบ contract-first, การพัฒนาในเครื่องผ่าน Docker และชุดตรวจสอบที่พร้อมสำหรับ CI เพื่อให้โปรเจกต์ใหม่เริ่มจากโครง full-stack จริงแทนไดเรกทอรีเปล่า
 
-เริ่มโปรเจกต์ใหม่จากเทมเพลตนี้:
-
-```bash
-git clone https://github.com/netparamad/template-nextjs-go my-app
-cd my-app
-npm run dev
-```
-
-จากนั้นทำตาม [คู่มือเปลี่ยนชื่อ](./docs/rename.md) เพื่อ rebrand
-
-frontend และ backend พัฒนาไปด้วยกัน ใช้ขั้นตอนการตั้งค่าในเครื่องเดียวกัน และถูกควบคุมผ่านคำสั่งระดับ root ดังนั้น monorepo จึงเหมาะกับโปรเจกต์นี้ (เหมาะกับทีมขนาดเล็กถึงกลางที่โปรเจกต์ผูกกันแน่นและแก้ไขไปพร้อมกัน)
+ทั้งสองแอปใช้คำสั่งระดับ root ร่วมกันและ workflow เดียวกัน `docs/openapi.yaml` เป็น HTTP contract และ type ฝั่ง frontend ถูก generate จากไฟล์นั้น เริ่มจากเทมเพลตนี้แล้วทำตาม [คู่มือเปลี่ยนชื่อ](docs/rename.md) เพื่อ rebrand
 
 ## ฟีเจอร์
 
-- โครงสร้าง monorepo ของ Next.js + Go ที่นำกลับมาใช้ซ้ำได้
-- ขั้นตอน auth ครบ: สมัครสมาชิก, เข้าสู่ระบบ, ยืนยันอีเมล, รีเซ็ตรหัสผ่าน, refresh, ออกจากระบบ
-- การหมุน refresh token แบบมี state (token ใช้ครั้งเดียวใน `user_sessions`) พร้อมต่ออายุฝั่ง frontend แบบเงียบ
-- แดชบอร์ดแบบ owner-only และแพตเทิร์น frontend ที่พร้อมต่อ analytics
-- การตั้งค่า PostgreSQL ในเครื่องผ่าน Docker Compose
-- API client ที่มี type ครบ ถอดมาจาก OpenAPI contract
-- token ฝั่ง frontend เก็บในหน่วยความจำ (ไม่ถูกบันทึกข้ามการ refresh ของเบราว์เซอร์)
-- seed บัญชี demo สำหรับการพัฒนาในเครื่อง
-- การตรวจสอบ lint, format, unit test, Playwright smoke test, production build, Go test และ Go build
-- GitHub Actions, CodeQL, สแกน secret ด้วย `gitleaks` และ Dependabot
-
-## สถาปัตยกรรม
-
-repo นี้เป็น monorepo ที่มีสองแอปพลิเคชันใช้ toolchain ระดับ root ร่วมกัน:
-
-- **frontend/**: แอป Next.js (App Router) จัดโครงสร้างแบบ feature-based ใน `src` มี auth, dashboard และ UI primitives ที่ใช้ร่วมกัน
-- **backend/**: API แบบ Go ที่แยกเลเยอร์ (`handler` → `service` → `repository`) ใช้ PostgreSQL และ SQL migrations
-- **PostgreSQL**: รันในเครื่องผ่าน Docker Compose โดย API จะรัน migration ที่ค้างอยู่ให้อัตโนมัติตอนเริ่มทำงาน
-- **Contract-first API**: `docs/openapi.yaml` เป็นแหล่งข้อมูลหลัก และ `frontend/src/generated/openapi.ts` ถูก generate มาจากไฟล์นั้น
-
-เส้นทางการเรียกใช้งาน:
-
-```text
-Browser (Next.js)
-  └─ fetch → Go API (/api/v1/*) → service → repository (pgx) → PostgreSQL
-```
-
-backend ห่อ router ด้วย CORS, security headers, request ID และ request logging ส่วน endpoint auth สาธารณะถูกจำกัดอัตรา (20 ครั้ง/นาทีต่อ IP, เก็บในหน่วยความจำ) และ endpoint analytics ถูกล็อกด้วย auth + middleware แบบ owner-only
+- **Monorepo Next.js + Go** — frontend, backend, docs, scripts และ CI อยู่ใน repo เดียวพร้อมการจัดการระดับ root
+- **ขั้นตอน auth ครบ** — สมัครสมาชิก, เข้าสู่ระบบ, ยืนยันอีเมล, รีเซ็ตรหัสผ่าน, refresh และออกจากระบบ
+- **หมุน refresh token แบบมี state** — token ใช้ครั้งเดียวเก็บใน `user_sessions`, ต่ออายุฝั่ง frontend แบบเงียบ, เพิกถอนเมื่อ logout/เปลี่ยนรหัสผ่าน และ access token เก็บในหน่วยความจำ
+- **แดชบอร์ด owner-only** — กำหนดสิทธิ์ด้วย owner email ที่ตั้งไว้ทั้งฝั่ง frontend และ backend
+- **PostgreSQL ผ่าน Docker** — Docker Compose ให้ Postgres ในเครื่อง และมี `prod` profile สำหรับ build image ทั้งสองแอป
+- **API client แบบ contract-first** — `docs/openapi.yaml` generate `frontend/src/generated/openapi.ts` ด้วย `openapi-typescript`
+- **Seed บัญชี demo** — `DEMO_SEED_ENABLED=true` สร้างบัญชีพร้อมใช้สำหรับการพัฒนาในเครื่อง
+- **ด่านตรวจคุณภาพ** — ESLint, Prettier, TypeScript, Vitest, Playwright, production build, Go test และ Go build
+- **ระบบความปลอดภัยอัตโนมัติ** — GitHub Actions CI, CodeQL สำหรับ JavaScript/TypeScript และ Go, `gitleaks` และ Dependabot
+- **UI แบบ stock shadcn** — ธีม neutral, ฟอนต์ Geist, light/dark mode ผ่าน `next-themes` และ hook ของ Plausible
 
 ## เทคโนโลยีที่ใช้
 
-**Frontend**
-
-- Next.js 16
-- React 19
-- TypeScript 5.9
-- Tailwind CSS 4
-- shadcn/ui
-- TanStack Query
-- Zustand
-- Lucide React
-- next-themes
-
-**Backend**
-
-- Go 1.25
-- PostgreSQL (pgx v5)
-- `golang-jwt/jwt/v5`
-- `golang.org/x/crypto` (แฮชรหัสผ่าน)
-- `joho/godotenv`
-- SQL migrations
-
-**เครื่องมือ / โครงสร้างพื้นฐาน**
-
-- Docker Compose
-- GitHub Actions (CI, CodeQL)
-- ESLint, Prettier, Vitest, Playwright (frontend)
-- golangci-lint v2 (backend)
-- Dependabot, `gitleaks`, `actionlint`
+| ด้าน | ที่เลือกใช้ |
+| --- | --- |
+| Frontend | [Next.js 16](https://nextjs.org) (App Router, Turbopack) · React 19 · TypeScript 5.9 |
+| Styling และ UI | Tailwind CSS 4 · [shadcn/ui](https://ui.shadcn.com) · Geist · `next-themes` |
+| State และ data ฝั่ง client | [TanStack Query](https://tanstack.com/query) · [Zustand](https://zustand.docs.pmnd.rs) · Lucide React |
+| Backend | [Go 1.25](https://go.dev) — แยกเลเยอร์ `handler` → `service` → `repository` |
+| ฐานข้อมูล | PostgreSQL (pgx v5) พร้อม SQL migrations |
+| Auth | JWT ผ่าน `golang-jwt/jwt/v5` · แฮชรหัสผ่านด้วย bcrypt |
+| API contract | OpenAPI 3.1 (`docs/openapi.yaml`) → `openapi-typescript` |
+| การทดสอบ | [Vitest](https://vitest.dev) + Testing Library · [Playwright](https://playwright.dev) |
+| เครื่องมือ | ESLint · Prettier · golangci-lint v2 · Docker Compose |
+| CI และความปลอดภัย | GitHub Actions · CodeQL · `gitleaks` · Dependabot |
+| Runtime | Node `>=22.23.4` (`.nvmrc` `24.22.1`) · Go 1.25.1 · image `node:24.22.1-alpine` |
 
 ## โครงสร้างโปรเจกต์
 
 ```text
 .
-├── backend/            # Go API
-│   ├── cmd/api/        # entrypoint (main.go)
+├── backend/
+│   ├── cmd/api/              # entrypoint main.go
 │   ├── internal/
-│   │   ├── config/     # โหลด config + ตรวจสอบฝั่ง production
-│   │   ├── domain/     # โมเดลโดเมน
-│   │   ├── handler/http/  # HTTP handlers
-│   │   ├── repository/    # เข้าถึง DB + migrations ที่ฝังในไบนารี
-│   │   ├── server/        # router + rate limiting
-│   │   └── service/       # business logic
-│   ├── migrations/        # SQL migrations (คู่ up/down)
-│   └── Makefile           # run, build, fmt, tidy, lint
-├── frontend/           # Next.js app
-│   ├── src/
-│   │   ├── app/        # เส้นทาง App Router ((auth), (site), (workspace))
-│   │   ├── components/ # UI ร่วม (shadcn/ui, header, footer)
-│   │   ├── features/   # auth/, dashboard/, home/, shared/
-│   │   ├── generated/  # type ที่ generate จาก OpenAPI
-│   │   ├── layouts/    # shell ของ root + route-area
-│   │   ├── lib/        # api client, app config, site copy
-│   │   └── types/      # TypeScript types ร่วม
-│   ├── e2e/            # Playwright smoke + mobile specs
+│   │   ├── config/           # โหลด env + ตรวจสอบฝั่ง production
+│   │   ├── domain/           # โมเดลโดเมน
+│   │   ├── handler/http/     # HTTP handlers
+│   │   ├── repository/       # เข้าถึง pgx + migrations ที่ฝังในไบนารี
+│   │   ├── server/           # router, middleware, rate limiting
+│   │   └── service/          # business logic
+│   ├── migrations/           # SQL up/down สำหรับรันเอง (สำเนาที่ต้องซิงก์)
+│   ├── Makefile
 │   └── Dockerfile
-├── docs/               # openapi.yaml + เอกสารโปรเจกต์
-├── scripts/            # สคริปต์ dev/ตรวจสอบระดับ root
-├── compose.yml         # postgres + prod profile (ไม่บังคับ)
-├── package.json        # สคริปต์ root + เครื่องมือ OpenAPI
-└── .github/            # workflow CI + Dependabot
+├── frontend/
+│   ├── src/
+│   │   ├── app/              # App Router: (auth), (site), (workspace)
+│   │   ├── components/       # UI ร่วม + shadcn/ui primitives
+│   │   ├── features/         # auth/, dashboard/, home/, shared/
+│   │   ├── generated/        # openapi.ts (generate แล้ว commit)
+│   │   ├── layouts/          # shell ของ root และ route-area
+│   │   ├── lib/              # API client, config, site copy
+│   │   └── types/            # TypeScript types ร่วม
+│   ├── e2e/                  # Playwright specs
+│   └── Dockerfile
+├── docs/                     # openapi.yaml + คู่มือโปรเจกต์
+├── scripts/                  # dev, check, e2e, contract, secrets
+├── compose.yml               # PostgreSQL + prod profile (ไม่บังคับ)
+├── package.json              # สคริปต์ root + เครื่องมือ OpenAPI
+├── .nvmrc
+└── .github/                  # CI, E2E, CodeQL, Dependabot
+```
+
+## การตั้งค่าในเครื่อง
+
+Docker Compose รัน PostgreSQL ในเครื่องเป็น `postgres:17-alpine` ฐานข้อมูล `app_db` ผู้ใช้ `postgres` รหัสผ่าน `db_password` เปิดพอร์ต `5432` และใช้ volume ชื่อ `template-nextjs-go-postgres-data` โดย API Go จะรัน migration ที่ค้างอยู่ให้อัตโนมัติตอนเริ่มทำงาน
+
+`npm run dev` ใช้ `scripts/dev.mjs` เชื่อมทั้ง stack เข้าด้วยกัน:
+
+1. สร้าง `frontend/.env.local` และ `backend/.env` จากไฟล์ example ถ้ายังไม่มี
+2. เริ่ม PostgreSQL ด้วย `docker compose up -d postgres` และรอจนพร้อม
+3. เริ่ม `npm run dev` ใน `frontend/` และ `go run ./cmd/api` ใน `backend/`
+
+`prod` profile (ไม่บังคับ) จะ build image ของ backend และ frontend โดยพอร์ตของ Compose ปรับได้ผ่าน `BACKEND_PORT` และ `FRONTEND_PORT` และ image ฝั่ง frontend รับ `NEXT_PUBLIC_API_BASE_URL` เป็น build argument
+
+```bash
+npm run prod       # docker compose --profile prod up --build
+npm run prod:down  # docker compose --profile prod down
 ```
 
 ## เริ่มต้นใช้งาน
 
-### สิ่งที่ต้องมีก่อน
-
-- Node.js `>=22` (ดู `.nvmrc`)
-- Go 1.25+
-- Docker (สำหรับ PostgreSQL ในเครื่องและ prod-like profile)
-
-### เริ่มแบบเร็ว (Docker Compose + สคริปต์ root)
-
-1. รัน `npm run dev` จาก root ของ repo
-2. Docker Compose จะเริ่ม PostgreSQL ให้อัตโนมัติ
-3. สคริปต์ dev จะสร้าง `frontend/.env.local` และ `backend/.env` จากไฟล์ example ถ้ายังไม่มี
-4. frontend และ backend จะเริ่มทำงานพร้อมกัน
-
-```text
-Frontend: http://localhost:3000
-Backend:  http://localhost:8080
-```
-
-### รันแอปใดแอปหนึ่ง
-
-เฉพาะ frontend:
+ความต้องการ: **Node.js `>=22.23.4`** (`.nvmrc` กำหนด `24.22.1`), **Go 1.25.1+**, **Docker พร้อม Compose** และ npm โดย Dockerfile ฝั่ง frontend ใช้ `node:24.22.1-alpine`
 
 ```bash
-cd frontend
-cp .env.example .env.local
+git clone https://github.com/netparamad/template-nextjs-go.git
+cd template-nextjs-go
 npm install
+npm --prefix frontend install
 npm run dev
 ```
 
-เฉพาะ backend:
+Frontend: `http://localhost:3000` · Backend: `http://localhost:8080`
+
+การรันแอปเดียวด้วยตนเอง:
 
 ```bash
-cd backend
-cp .env.example .env
-go mod tidy
-go run ./cmd/api
+cd frontend && cp .env.example .env.local && npm install && npm run dev
+cd backend && cp .env.example .env && go run ./cmd/api
 ```
 
-### รันแบบ prod-like ในเครื่อง
+### คำสั่งสคริปต์
 
-```bash
-npm run prod      # docker compose --profile prod up --build
-npm run prod:down # docker compose --profile prod down
-```
+| คำสั่ง | คำอธิบาย |
+| --- | --- |
+| `npm run dev` | เริ่ม Postgres แล้วเปิด frontend กับ backend พร้อมกัน |
+| `npm run dev:down` | หยุดบริการของ Docker Compose |
+| `npm run prod` | Build และรัน Compose profile แบบ prod-like |
+| `npm run prod:down` | หยุด prod profile |
+| `npm run api:types` | Generate `frontend/src/generated/openapi.ts` ใหม่ |
+| `npm run check:contract` | Generate type ใหม่และ fail ถ้าเกิด git drift |
+| `npm run check:workflows` | ตรวจ workflow ของ GitHub Actions ด้วย `actionlint` |
+| `npm run check:secrets` | สแกนเนื้อหาที่ track ด้วย `gitleaks` |
+| `npm run check` | ด่านตรวจเต็มในเครื่อง: frontend checks, build, Go test, Go build |
+| `npm run e2e:install` | ติดตั้งเบราว์เซอร์ Chromium ของ Playwright |
+| `npm run e2e` | เริ่ม Postgres, API และแอป แล้วรัน Playwright |
 
-`prod` profile จะ build image ของ backend และ frontend โดยพอร์ตของ Compose ปรับได้ผ่าน `BACKEND_PORT` และ `FRONTEND_PORT`
+คำสั่งฝั่ง backend จาก `backend/`:
 
-### คำสั่งระดับ root
+| คำสั่ง | คำอธิบาย |
+| --- | --- |
+| `make run` | `go run ./cmd/api` |
+| `make build` | `go build ./...` |
+| `make fmt` | `gofmt -w ./cmd ./internal` |
+| `make tidy` | `go mod tidy` |
+| `make lint` | รัน golangci-lint v2 ผ่าน `go run` |
 
-```bash
-npm run dev
-npm run dev:down
-npm run prod
-npm run prod:down
-npm run api:types
-npm run check:contract
-npm run check:workflows
-npm run check:secrets
-npm run check
-npm run e2e:install
-npm run e2e
-```
+## ตัวแปรสภาพแวดล้อม
 
-### คำสั่งฝั่ง frontend (`frontend/`)
-
-```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
-npm run test
-npm run e2e:test
-npm run format
-npm run typecheck
-```
-
-### คำสั่งฝั่ง backend (`backend/`)
-
-```bash
-make run    # go run ./cmd/api
-make build  # go build ./...
-make fmt    # gofmt -w ./cmd ./internal
-make tidy   # go mod tidy
-make lint   # golangci-lint
-```
-
-## บัญชี Demo
-
-บัญชี demo จะถูก seed เมื่อ `DEMO_SEED_ENABLED=true`:
-
-- email: `demo@nextjs-go.local`
-- password: `demo12345`
-
-ข้อมูลรับรองที่แสดงบนหน้า login มาจาก `NEXT_PUBLIC_DEMO_EMAIL` / `NEXT_PUBLIC_DEMO_PASSWORD`
-
-## Endpoint ของ API
-
-Base URL: `http://localhost:8080` contract ฉบับเต็มอยู่ใน [`docs/openapi.yaml`](./docs/openapi.yaml)
-
-| Method | Path | คำอธิบาย |
-| ------ | ---- | -------- |
-| GET | `/health` | สถานะสุขภาพของ API |
-| POST | `/api/v1/auth/register` | สมัครผู้ใช้ใหม่ |
-| POST | `/api/v1/auth/login` | เข้าสู่ระบบด้วย email + password |
-| POST | `/api/v1/auth/verify-email` | ยืนยันอีเมลด้วย token |
-| POST | `/api/v1/auth/resend-verification` | ส่งอีเมลยืนยันซ้ำ |
-| POST | `/api/v1/auth/forgot-password` | ขออีเมลรีเซ็ตรหัสผ่าน |
-| POST | `/api/v1/auth/reset-password` | รีเซ็ตรหัสผ่านด้วย token |
-| POST | `/api/v1/auth/refresh` | หมุน refresh token เป็น session คู่ใหม่ |
-| POST | `/api/v1/auth/logout` | เพิกถอน refresh token |
-| GET | `/api/v1/auth/me` | ดึงผู้ใช้ปัจจุบัน (bearer auth) |
-| GET | `/api/v1/analytics/overview` | ภาพรวม analytics (owner-only, bearer auth) |
-
-เส้นทางที่ต้องยืนยันตัวตนต้องส่ง:
-
-```text
-Authorization: Bearer <access_token>
-```
-
-## API Contracts
-
-- `docs/openapi.yaml` เป็นแหล่งข้อมูลหลักของ HTTP contract ที่ API ฝั่ง Go เปิดให้ใช้
-- `frontend/src/generated/openapi.ts` ถูก generate จาก spec นั้นด้วย `openapi-typescript`
-- ให้รัน `npm run api:types` หลังแก้ไข route, payload หรือรูปแบบ response ของ API เพื่อให้ frontend ตรงกับ backend
-- ให้รัน `npm run check:contract` เพื่อยืนยันว่า type ที่ generate ถูก commit และซิงก์กันแล้ว
-
-## ตัวแปรสภาพแวดล้อม (Environment Variables)
-
-คัดลอกไฟล์ `*.example` แต่ละไฟล์ไปเป็นไฟล์จริง ไฟล์ env ที่ generate จะถูก gitignore ส่วนไฟล์ example เป็นแหล่งข้อมูลหลัก
+คัดลอกไฟล์ `*.example` แต่ละไฟล์ไปเป็นไฟล์จริง ไฟล์ที่ generate จะถูก gitignore และไฟล์ example เป็นแหล่งข้อมูลหลัก (`npm run dev` สร้างให้อัตโนมัติ)
 
 ### Backend (`backend/.env`)
 
-ส่วนแอปพลิเคชัน:
-
-```text
-APP_NAME
-APP_ENV
-APP_PORT
-APP_HOST
-APP_BASE_URL
-FRONTEND_APP_URL
-CORS_ALLOWED_ORIGINS
-```
-
-ฐานข้อมูล:
-
-```text
-DATABASE_URL
-DB_HOST
-DB_PORT
-DB_NAME
-DB_USER
-DB_PASSWORD
-DB_SSLMODE
-DB_SCHEMA
-```
-
-Auth / JWT:
-
-```text
-JWT_ACCESS_SECRET
-JWT_REFRESH_SECRET
-JWT_ACCESS_TTL_MINUTES
-JWT_REFRESH_TTL_HOURS
-```
-
-อีเมล (รีเซ็ตรหัสผ่าน / ยืนยันตัวตน):
-
-```text
-MAIL_FROM
-RESEND_API_KEY
-SMTP_HOST
-SMTP_PORT
-SMTP_USER
-SMTP_PASS
-```
-
-Analytics / owner:
-
-```text
-ANALYTICS_PROVIDER
-DASHBOARD_OWNER_EMAIL
-PLAUSIBLE_BASE_URL
-PLAUSIBLE_SITE_ID
-PLAUSIBLE_API_TOKEN
-```
-
-Demo seeding:
-
-```text
-DEMO_SEED_ENABLED
-DEMO_USER_EMAIL
-DEMO_USER_PASSWORD
-DEMO_USER_USERNAME
-DEMO_USER_FULL_NAME
-```
-
-หมายเหตุ:
-
-- ใน production แนะนำให้ใช้ `DATABASE_URL` มิฉะนั้นจะใช้ตัวแปร `DB_*` แยกกัน
-- รองรับ `PORT` โดยอัตโนมัติสำหรับแพลตฟอร์มแบบ Railway/Render/Fly
-- `CORS_ALLOWED_ORIGINS` ควรมี URL ของแอป frontend รวมอยู่ด้วย
-- production จะไม่ยอมเริ่มทำงานถ้า `JWT_ACCESS_SECRET` ยังเป็นค่า placeholder
+| ตัวแปร | จำเป็น | หมายเหตุ |
+| --- | --- | --- |
+| `APP_NAME` / `APP_ENV` | ไม่บังคับ | ค่าเริ่มต้น `Template Next.js Go API` / `development` |
+| `APP_PORT` / `APP_HOST` | ไม่บังคับ | ค่าเริ่มต้น `8080` / `0.0.0.0`; รองรับ `PORT` ของแพลตฟอร์มด้วย |
+| `APP_BASE_URL` / `FRONTEND_APP_URL` | ไม่บังคับ | origin ของ API และ frontend ที่ใช้ในอีเมล |
+| `CORS_ALLOWED_ORIGINS` | ✅ | ต้องมี origin ของ frontend |
+| `DATABASE_URL` | production | ใช้ก่อนเมื่อตั้งค่าไว้; ถ้าไม่ตั้งจะใช้ `DB_*` |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` | local | ค่าเริ่มต้น `localhost` / `5432` / `app_db` |
+| `DB_USER` / `DB_PASSWORD` | local | ค่าเริ่มต้น `postgres` / `postgres`; ตัวอย่างใช้ `db_password` |
+| `DB_SSLMODE` / `DB_SCHEMA` | local | ค่าเริ่มต้น `disable` / `public` |
+| `JWT_ACCESS_SECRET` | ✅ | ต้องเปลี่ยนเป็นค่าจริงใน production |
+| `JWT_REFRESH_SECRET` | ✅ | ต้องเปลี่ยนเป็นค่าจริงใน production |
+| `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_HOURS` | ไม่บังคับ | ค่าเริ่มต้น `15` / `720` |
+| `MAIL_FROM` / `RESEND_API_KEY` | สำหรับอีเมล | ผู้ส่ง + คีย์ Resend สำหรับอีเมลยืนยัน/รีเซ็ต |
+| `SMTP_HOST` / `SMTP_PORT` | ไม่บังคับ | SMTP ทางเลือกสำรอง; พอร์ตเริ่มต้น `587` |
+| `SMTP_USER` / `SMTP_PASS` | ไม่บังคับ | ข้อมูลรับรอง SMTP |
+| `ANALYTICS_PROVIDER` | ไม่บังคับ | ตัวอย่างใช้ `plausible` |
+| `DASHBOARD_OWNER_EMAIL` | owner flows | ตรวจสิทธิ์เจ้าของฝั่ง backend |
+| `PLAUSIBLE_BASE_URL` | ไม่บังคับ | ค่าเริ่มต้น `https://plausible.io` |
+| `PLAUSIBLE_SITE_ID` / `PLAUSIBLE_API_TOKEN` | ไม่บังคับ | site identifier + API token ฝั่งเซิร์ฟเวอร์ |
+| `DEMO_SEED_ENABLED` | local | เปิดการ seed ผู้ใช้ demo |
+| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | local | ค่าเริ่มต้น `demo@nextjs-go.local` / `demo12345` |
+| `DEMO_USER_USERNAME` / `DEMO_USER_FULL_NAME` | local | ค่าเริ่มต้น `nextjs-go-demo` / `Next.js Go Demo` |
 
 ### Frontend (`frontend/.env.local`)
 
-```text
-NEXT_PUBLIC_APP_NAME
-NEXT_PUBLIC_APP_URL
-NEXT_PUBLIC_API_BASE_URL
-NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL
-NEXT_PUBLIC_PLAUSIBLE_DOMAIN
-NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC
-NEXT_PUBLIC_DEMO_EMAIL
-NEXT_PUBLIC_DEMO_PASSWORD
-```
+| ตัวแปร | จำเป็น | หมายเหตุ |
+| --- | --- | --- |
+| `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_APP_URL` | ไม่บังคับ | ค่าเริ่มต้น `Template Next.js Go` / `http://localhost:3000` |
+| `NEXT_PUBLIC_API_BASE_URL` | ✅ | base ของ API เช่น `http://localhost:8080/api/v1` |
+| `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL` | owner flows | ตรวจสิทธิ์เจ้าของฝั่ง frontend |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC` | ไม่บังคับ | domain + URL สคริปต์ของ Plausible |
+| `NEXT_PUBLIC_DEMO_EMAIL` / `NEXT_PUBLIC_DEMO_PASSWORD` | local | ข้อมูลรับรอง demo ที่แสดงบนหน้า login |
 
 ### Docker Compose (shell / `.env`)
 
-```text
-BACKEND_PORT
-FRONTEND_PORT
-NEXT_PUBLIC_API_BASE_URL
-```
+| ตัวแปร | จำเป็น | หมายเหตุ |
+| --- | --- | --- |
+| `BACKEND_PORT` / `FRONTEND_PORT` | ไม่บังคับ | พอร์ต host ของ API/แอป ค่าเริ่มต้น `8080` / `3000` |
+| `NEXT_PUBLIC_API_BASE_URL` | prod profile | URL ของ API ตอน build ค่าเริ่มต้น `http://localhost:8080/api/v1` |
 
-## การใช้งาน
+## วิธีใช้งาน
 
-- เปิดหน้า landing ที่ `http://localhost:3000`
-- สมัครบัญชีใหม่ หรือเข้าสู่ระบบด้วยบัญชี demo เพื่อเข้าสู่แดชบอร์ด
-- แดชบอร์ดเป็นพื้นที่ owner-only โดยกำหนดสิทธิ์เจ้าของผ่าน `DASHBOARD_OWNER_EMAIL` (backend) และ `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL` (frontend)
-- ข้อความ branding และเนื้อหาหน้า landing รวมอยู่ที่ `frontend/src/lib/site-copy.ts`
-
-## ด่านตรวจคุณภาพ
-
-- `npm run check` รัน lint ฝั่ง frontend (strict), ตรวจ format, typecheck, unit test, production build รวมถึง test และ build ของ backend
-- `npm run check:contract` generate type จาก OpenAPI อีกครั้ง และจะ fail ถ้า `frontend/src/generated/openapi.ts` ไม่ตรงกัน
-- `npm run check:workflows` ตรวจ workflow ของ GitHub Actions ด้วย `actionlint`
-- `npm run check:secrets` สแกนเนื้อหาที่ track ใน git ด้วย `gitleaks`
-- `npm run e2e:install` ติดตั้งเบราว์เซอร์ของ Playwright (รันครั้งเดียวเมื่อขึ้นเครื่องใหม่)
-- `npm run e2e` เริ่ม PostgreSQL, Go API และแอป Next.js ก่อนรัน Playwright smoke test
-
-## การสแกนความปลอดภัยอัตโนมัติ
-
-- CodeQL สแกนโค้ด JavaScript/TypeScript และ Go บน GitHub
-- `gitleaks` สแกนเนื้อหาที่ track เพื่อหา secret ใน CI
-- Dependabot อัปเดต dependency ของ npm, Go modules และ GitHub Actions ทุกสัปดาห์
-
-## เอกสารของโปรเจกต์ย่อย
-
-- [frontend/README.md](./frontend/README.md)
-- [backend/README.md](./backend/README.md)
-
-## เอกสารโปรเจกต์
-
-- [Security](./docs/security.md)
-- [Tooling](./docs/tooling.md)
-- [Rename guide](./docs/rename.md)
-- [Removing auth](./docs/remove-auth.md)
-- [UI/UX guidelines](./docs/ui-ux-guidelines.md)
+1. เปิดหน้า landing ที่ `http://localhost:3000`
+2. สมัครบัญชี หรือเข้าสู่ระบบด้วยบัญชี demo ที่ seed ไว้เมื่อ `DEMO_SEED_ENABLED=true`
+3. เข้าสู่แดชบอร์ด ซึ่งเห็นได้เฉพาะเจ้าของที่กำหนดผ่าน `DASHBOARD_OWNER_EMAIL` และ `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL`
+4. เปลี่ยน branding และข้อความหน้า landing ที่ `frontend/src/lib/site-copy.ts`; ทำตาม [คู่มือเปลี่ยนชื่อ](docs/rename.md) สำหรับ rebrand ทั้งหมด
+5. เปลี่ยน route หรือ payload ของ API ใน `docs/openapi.yaml` แล้วรัน `npm run api:types` และ `npm run check:contract`
 
 ## หมายเหตุ
 
-- token ของ auth ฝั่ง frontend เก็บในหน่วยความจำแทนการเก็บถาวรในเบราว์เซอร์
-- endpoint auth สาธารณะถูกจำกัดอัตราแบบ in-memory ควรมี edge limiter ด้านหน้าเมื่อ deploy หลาย replica
-- demo seeding สามารถสร้างบัญชีพร้อมใช้สำหรับการพัฒนาในเครื่อง
-- SQL ของ migration ฝั่ง backend มีสองสำเนาที่ต้องซิงก์กัน — `backend/migrations/` (สำหรับ deploy แบบ manual) และ `backend/internal/repository/migrations/` (ฝังในไบนารี) ต้องเหมือนกันเสมอเมื่อเพิ่ม migration
-
-## License
-
-MIT — ดู [LICENSE](./LICENSE)
+- **การ generate contract** — ห้ามแก้ `frontend/src/generated/openapi.ts` ด้วยมือ ให้ generate ใหม่ commit ผลลัพธ์ และให้ `check:contract` จับ drift ใน CI
+- **การลบ auth** — ลบ auth ได้โดยทำตาม [docs/remove-auth.md](docs/remove-auth.md); เป็นการลบตามเอกสาร ไม่ใช่ runtime flag
+- **CI** — `.github/workflows/template-ci.yml` รัน job contract, frontend, backend และ hygiene; `e2e.yml` รัน Playwright; `codeql.yml` สแกน JavaScript/TypeScript และ Go ส่วน Dependabot อัปเดต npm, Go modules และ Actions รายสัปดาห์
+- **การดีพลอย** — README ฝั่ง backend แนะนำ frontend host เช่น Vercel หรือ Netlify, backend host เช่น Railway, Render หรือ Fly.io และ PostgreSQL provider โดยทั้งสองแอปมี Dockerfile และ API รัน migration ตอนเริ่มทำงาน
+- **Migrations** — ต้องทำให้ `backend/migrations/` กับ `backend/internal/repository/migrations/` เหมือนกันเสมอ; ชุดแรกสำหรับ deploy ด้วยมือ ชุดที่สองฝังในไบนารี
+- **ข้อจำกัด** — token ฝั่ง frontend เก็บในหน่วยความจำ และ endpoint auth สาธารณะถูกจำกัดอัตราในหน่วยความจำ (20 ครั้ง/นาทีต่อ IP) ควรเพิ่ม edge limiter เมื่อ deploy หลาย replica
+- **สัญญาอนุญาต** — MIT, copyright netparamad ดู [LICENSE](LICENSE) เอกสารโปรเจกต์ย่อย: [frontend](frontend/README.md), [backend](backend/README.md), [docs](docs/)

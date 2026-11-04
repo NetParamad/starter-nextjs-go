@@ -33,7 +33,7 @@ before proposing changes, and append new hard-to-reverse decisions here.
 | 2026-10-16 | e2e runs `node .next/standalone/<nested>/server.js` (path probed) with static synced in; IPv6-wildcard port probe; group-kill cleanup | `outputFileTracingRoot` nests standalone output; old `next start` path 404'd all static assets. |
 | 2026-10-16 | Stateful refresh-token rotation in `user_sessions` (revoked_at, single-use) + silent frontend renew + revoke-on-logout/password-change | Reuses the original unused `user_sessions` table instead of a new one; in-memory session storage kept. |
 | 2026-10-16 | Sessions record user-agent + IP (`SessionMeta` threaded handler→service); `npm audit fix` to 0 vulns; pgx 5.11 | UA/IP columns finally used; audit fix surfaced a new eslint rule (fixed `error.tsx` router push). |
-| 2026-10-16 | Copy normalized to English; Node pinned (`≥22` + `.nvmrc`); prod compose profile; first component tests; auth removable via `registerAuthRoutes` + `docs/remove-auth.md` | Auth removal is documented deletion, not a runtime flag. |
+| 2026-10-16 | Copy normalized to English; Node pinned (`≥22.23.4` + `.nvmrc` 24.22.1); prod compose profile; first component tests; auth removable via `registerAuthRoutes` + `docs/remove-auth.md` | Auth removal is documented deletion, not a runtime flag. |
 | 2026-10-16 | Standalone tracing root via `NEXT_STANDALONE_TRACING_ROOT` (flat in Docker, nested locally); compose ports configurable | Nesting dir depends on project dirname, so both layouts are probed, never hardcoded. |
 
 ## Conventions
