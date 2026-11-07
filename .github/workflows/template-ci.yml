@@ -96,6 +96,7 @@ jobs:
       - name: Security scan (govulncheck)
         uses: golang/govulncheck-action@v1
         with:
+          go-version-input: ""
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
           repo-checkout: false
@@ -153,7 +154,7 @@ jobs:
           tags: template-nextjs-go-frontend:test
 
       - name: Scan backend container with Trivy
-        uses: aquasecurity/trivy-action@v0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: template-nextjs-go-backend:test
           format: table
@@ -161,7 +162,7 @@ jobs:
           severity: CRITICAL,HIGH
 
       - name: Scan frontend container with Trivy
-        uses: aquasecurity/trivy-action@v0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: template-nextjs-go-frontend:test
           format: table
