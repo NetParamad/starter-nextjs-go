@@ -15,15 +15,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { login, register } from "@/features/auth/services/auth-service";
 import {
-  forgotPassword,
-  login,
-  register,
-} from "@/features/auth/services/auth-service";
+  loginSchema,
+  registerSchema,
+} from "@/features/auth/schemas/auth-schemas";
 import { AuthSplitShell } from "@/features/auth/components/auth-split-shell";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { appConfig } from "@/lib/app-config";
-import type { AuthSession, RegisterResponse } from "@/types/auth";
+import type { AuthSession } from "@/types/auth";
 
 type Field = {
   id: string;
@@ -38,7 +38,7 @@ type SecondaryLink = {
 };
 
 type AuthFormShellProps = {
-  mode: "login" | "signup" | "forgot-password";
+  mode: "login" | "signup";
   title: string;
   description: string;
   submitLabel: string;
@@ -68,48 +68,42 @@ export function AuthFormShell({
 
   const mutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      if (mode === "forgot-password") {
-        return forgotPassword({
-          email: String(formData.get("email") ?? ""),
-        });
-      }
-
       if (mode === "login") {
-        return login({
-          email: String(formData.get("email") ?? ""),
-          password: String(formData.get("password") ?? ""),
+        const parsed = loginSchema.safeParse({
+          email: formData.get("email"),
+          password: formData.get("password"),
         });
+        if (!parsed.success) {
+          throw new Error(parsed.error.issues[0]?.message || "Invalid input");
+        }
+        return login(parsed.data);
       }
 
-      const password = String(formData.get("password") ?? "");
-      const confirmPassword = String(formData.get("confirm_password") ?? "");
-      if (password !== confirmPassword) {
-        throw new Error("Passwords do not match.");
+      const parsed = registerSchema.safeParse({
+        username: formData.get("username"),
+        email: formData.get("email"),
+        password: formData.get("password"),
+        confirm_password: formData.get("confirm_password"),
+        full_name: formData.get("full_name") || undefined,
+      });
+      if (!parsed.success) {
+        throw new Error(parsed.error.issues[0]?.message || "Invalid input");
       }
-
       return register({
-        username: String(formData.get("username") ?? ""),
-        email: String(formData.get("email") ?? ""),
-        password,
-        full_name: String(formData.get("full_name") ?? ""),
+        username: parsed.data.username,
+        email: parsed.data.email,
+        password: parsed.data.password,
+        full_name: parsed.data.full_name || "",
       });
     },
     onSuccess: async (result) => {
       setErrorMessage("");
 
-      if (mode === "forgot-password") {
-        setSuccessMessage(
-          "If your email is registered, a reset link will be sent there.",
-        );
-        return;
-      }
-
       if (mode === "signup") {
-        const email = (result as RegisterResponse).user.email;
-        router.push(
-          `/confirm-email${email ? `?email=${encodeURIComponent(email)}` : ""}`,
-        );
-        router.refresh();
+        setSuccessMessage("Account created successfully! You can now log in.");
+        setTimeout(() => {
+          router.push("/login");
+        }, 1200);
         return;
       }
 

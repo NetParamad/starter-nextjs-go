@@ -75,14 +75,13 @@ Notes:
 ## Database
 
 Core schema is defined in `migrations/` (`*.up.sql` / `*.down.sql` pairs,
-currently `000001`–`000004`).
+starting with `000001_init_schema`).
 
 Apply all pending migrations before starting the API in production (the API
 runs them automatically on boot via `RunMigrations`).
 
-Migration SQL lives in two synced copies: `migrations/` (for manual
-deploys) and `internal/repository/migrations/` (embedded into the binary).
-Keep both identical when adding a migration.
+Migration SQL lives in a single place: `migrations/`, embedded directly into
+the Go binary via `embed.FS`.
 
 ## Deploying
 
@@ -125,25 +124,3 @@ Good first integrations:
 - login
 - register
 - fetch current user
-
-## Password Reset Email
-
-Optional setup with Resend API:
-
-```text
-MAIL_FROM=onboarding@resend.dev
-RESEND_API_KEY=re_your_resend_api_key
-```
-
-Notes:
-- `RESEND_API_KEY` is used directly by the backend to send reset emails through Resend.
-- For production, verify your own domain in Resend and use a sender like `noreply@yourdomain.com`.
-
-Optional SMTP fallback:
-
-```text
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=587
-SMTP_USER=resend
-SMTP_PASS=your_resend_smtp_password
-```

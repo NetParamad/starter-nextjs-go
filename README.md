@@ -37,23 +37,24 @@ The two apps share root-level commands and one local workflow. `docs/openapi.yam
 - **Demo account seeding** — `DEMO_SEED_ENABLED=true` provisions a ready-to-use local account.
 - **Quality gates** — ESLint, Prettier, TypeScript, Vitest, Playwright, production build, Go test, and Go build.
 - **Security automation** — GitHub Actions CI, CodeQL for JavaScript/TypeScript and Go, `gitleaks`, and Dependabot.
-- **Stock shadcn UI** — neutral theme, Geist fonts, light/dark mode via `next-themes`, and Plausible hooks.
+- **Stock shadcn UI** — neutral theme, Geist fonts, and light/dark mode via `next-themes`.
 
 ## Tech stack
 
-| Area | Choice |
-| --- | --- |
-| Frontend | [Next.js 16](https://nextjs.org) (App Router, Turbopack) · React 19 · TypeScript 5.9 |
-| Styling & UI | Tailwind CSS 4 · [shadcn/ui](https://ui.shadcn.com) · Geist · `next-themes` |
+| Area                | Choice                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Frontend            | [Next.js 16](https://nextjs.org) (App Router, Turbopack) · React 19 · TypeScript 5.9                  |
+| Styling & UI        | Tailwind CSS 4 · [shadcn/ui](https://ui.shadcn.com) · Geist · `next-themes`                           |
 | Client state & data | [TanStack Query](https://tanstack.com/query) · [Zustand](https://zustand.docs.pmnd.rs) · Lucide React |
-| Backend | [Go 1.25](https://go.dev) — layered `handler` → `service` → `repository` |
-| Database | PostgreSQL (pgx v5) with SQL migrations |
-| Auth | JWT via `golang-jwt/jwt/v5` · bcrypt password hashing |
-| API contract | OpenAPI 3.1 (`docs/openapi.yaml`) → `openapi-typescript` |
-| Testing | [Vitest](https://vitest.dev) + Testing Library · [Playwright](https://playwright.dev) |
-| Tooling | ESLint · Prettier · golangci-lint v2 · Docker Compose |
-| CI & security | GitHub Actions · CodeQL · `gitleaks` · Dependabot |
-| Runtime | Node `>=22.23.4` (`.nvmrc` `24.22.1`) · Go 1.25.1 · `node:24.22.1-alpine` image |
+| Backend             | [Go 1.25](https://go.dev) — layered `handler` → `service` → `repository`                              |
+| Database            | PostgreSQL (pgx v5) with SQL migrations                                                               |
+| Auth                | JWT via `golang-jwt/jwt/v5` · bcrypt password hashing                                                 |
+| API contract        | OpenAPI 3.1 (`docs/openapi.yaml`) → `openapi-typescript`                                              |
+| Observability       | Prometheus metrics (`/metrics`) · Tracing (`X-Request-ID`)                                            |
+| Testing             | [Vitest](https://vitest.dev) + Testing Library · [Playwright](https://playwright.dev)                 |
+| Tooling             | ESLint · Prettier · Husky · lint-staged · golangci-lint · Docker Compose                              |
+| CI & security       | GitHub Actions · `govulncheck` · `npm audit` · CodeQL · `gitleaks`                                    |
+| Runtime             | Node `>=22.23.4` (`.nvmrc` `24.22.1`) · Go 1.25.1 · `node:24.22.1-alpine` image                       |
 
 ## Project structure
 
@@ -65,10 +66,10 @@ The two apps share root-level commands and one local workflow. `docs/openapi.yam
 │   │   ├── config/           # env loading + production validation
 │   │   ├── domain/           # domain models
 │   │   ├── handler/http/     # HTTP handlers
-│   │   ├── repository/       # pgx access + embedded migrations
+│   │   ├── repository/       # pgx access + sqlc queries
 │   │   ├── server/           # router, middleware, rate limiting
 │   │   └── service/          # business logic
-│   ├── migrations/           # manual up/down SQL (synced copy)
+│   ├── migrations/           # embedded SQL migrations (up/down)
 │   ├── Makefile
 │   └── Dockerfile
 ├── frontend/
@@ -130,29 +131,29 @@ cd backend && cp .env.example .env && go run ./cmd/api
 
 ### Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start Postgres, then the frontend and backend together |
-| `npm run dev:down` | Stop the Docker Compose services |
-| `npm run prod` | Build and run the prod-like Compose profile |
-| `npm run prod:down` | Stop the prod profile |
-| `npm run api:types` | Regenerate `frontend/src/generated/openapi.ts` |
-| `npm run check:contract` | Regenerate types and fail on git drift |
-| `npm run check:workflows` | Lint GitHub Actions workflows with `actionlint` |
-| `npm run check:secrets` | Scan tracked content with `gitleaks` |
-| `npm run check` | Full local gate: frontend checks, build, Go test, Go build |
-| `npm run e2e:install` | Install the Playwright Chromium browser |
-| `npm run e2e` | Start Postgres, the API, and the app, then run Playwright |
+| Command                   | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `npm run dev`             | Start Postgres, then the frontend and backend together     |
+| `npm run dev:down`        | Stop the Docker Compose services                           |
+| `npm run prod`            | Build and run the prod-like Compose profile                |
+| `npm run prod:down`       | Stop the prod profile                                      |
+| `npm run api:types`       | Regenerate `frontend/src/generated/openapi.ts`             |
+| `npm run check:contract`  | Regenerate types and fail on git drift                     |
+| `npm run check:workflows` | Lint GitHub Actions workflows with `actionlint`            |
+| `npm run check:secrets`   | Scan tracked content with `gitleaks`                       |
+| `npm run check`           | Full local gate: frontend checks, build, Go test, Go build |
+| `npm run e2e:install`     | Install the Playwright Chromium browser                    |
+| `npm run e2e`             | Start Postgres, the API, and the app, then run Playwright  |
 
 Backend commands from `backend/`:
 
-| Command | Description |
-| --- | --- |
-| `make run` | `go run ./cmd/api` |
-| `make build` | `go build ./...` |
-| `make fmt` | `gofmt -w ./cmd ./internal` |
-| `make tidy` | `go mod tidy` |
-| `make lint` | Run golangci-lint v2 via `go run` |
+| Command      | Description                       |
+| ------------ | --------------------------------- |
+| `make run`   | `go run ./cmd/api`                |
+| `make build` | `go build ./...`                  |
+| `make fmt`   | `gofmt -w ./cmd ./internal`       |
+| `make tidy`  | `go mod tidy`                     |
+| `make lint`  | Run golangci-lint v2 via `go run` |
 
 ## Environment variables
 
@@ -160,46 +161,46 @@ Copy each `*.example` file to its real counterpart. Generated files are gitignor
 
 ### Backend (`backend/.env`)
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `APP_NAME` / `APP_ENV` | optional | Defaults `Template Next.js Go API` / `development` |
-| `APP_PORT` / `APP_HOST` | optional | Defaults `8080` / `0.0.0.0`; platform `PORT` also works |
-| `APP_BASE_URL` / `FRONTEND_APP_URL` | optional | Public API and frontend origins used in emails |
-| `CORS_ALLOWED_ORIGINS` | ✅ | Must include the frontend origin |
-| `DATABASE_URL` | production | Preferred when set; otherwise `DB_*` is used |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` | local | Defaults `localhost` / `5432` / `app_db` |
-| `DB_USER` / `DB_PASSWORD` | local | Defaults `postgres` / `postgres`; example uses `db_password` |
-| `DB_SSLMODE` / `DB_SCHEMA` | local | Defaults `disable` / `public` |
-| `JWT_ACCESS_SECRET` | ✅ | Must be replaced in production |
-| `JWT_REFRESH_SECRET` | ✅ | Must be replaced in production |
-| `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_HOURS` | optional | Defaults `15` / `720` |
-| `MAIL_FROM` / `RESEND_API_KEY` | for mail | Sender + Resend key for verification/reset email |
-| `SMTP_HOST` / `SMTP_PORT` | optional | SMTP fallback; port defaults to `587` |
-| `SMTP_USER` / `SMTP_PASS` | optional | SMTP credentials |
-| `ANALYTICS_PROVIDER` | optional | Example uses `plausible` |
-| `DASHBOARD_OWNER_EMAIL` | owner flows | Backend owner check |
-| `PLAUSIBLE_BASE_URL` | optional | Defaults to `https://plausible.io` |
-| `PLAUSIBLE_SITE_ID` / `PLAUSIBLE_API_TOKEN` | optional | Site identifier + server-side API token |
-| `DEMO_SEED_ENABLED` | local | Enables demo-user seeding |
-| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD` | local | Defaults `demo@nextjs-go.local` / `demo12345` |
-| `DEMO_USER_USERNAME` / `DEMO_USER_FULL_NAME` | local | Defaults `nextjs-go-demo` / `Next.js Go Demo` |
+| Variable                                           | Required    | Notes                                                        |
+| -------------------------------------------------- | ----------- | ------------------------------------------------------------ |
+| `APP_NAME` / `APP_ENV`                             | optional    | Defaults `Template Next.js Go API` / `development`           |
+| `APP_PORT` / `APP_HOST`                            | optional    | Defaults `8080` / `0.0.0.0`; platform `PORT` also works      |
+| `APP_BASE_URL` / `FRONTEND_APP_URL`                | optional    | Public API and frontend origins used in emails               |
+| `CORS_ALLOWED_ORIGINS`                             | ✅          | Must include the frontend origin                             |
+| `DATABASE_URL`                                     | production  | Preferred when set; otherwise `DB_*` is used                 |
+| `DB_HOST` / `DB_PORT` / `DB_NAME`                  | local       | Defaults `localhost` / `5432` / `app_db`                     |
+| `DB_USER` / `DB_PASSWORD`                          | local       | Defaults `postgres` / `postgres`; example uses `db_password` |
+| `DB_SSLMODE` / `DB_SCHEMA`                         | local       | Defaults `disable` / `public`                                |
+| `JWT_ACCESS_SECRET`                                | ✅          | Must be replaced in production                               |
+| `JWT_REFRESH_SECRET`                               | ✅          | Must be replaced in production                               |
+| `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_HOURS` | optional    | Defaults `15` / `720`                                        |
+| `MAIL_FROM` / `RESEND_API_KEY`                     | for mail    | Sender + Resend key for verification/reset email             |
+| `SMTP_HOST` / `SMTP_PORT`                          | optional    | SMTP fallback; port defaults to `587`                        |
+| `SMTP_USER` / `SMTP_PASS`                          | optional    | SMTP credentials                                             |
+| `ANALYTICS_PROVIDER`                               | optional    | Example uses `plausible`                                     |
+| `DASHBOARD_OWNER_EMAIL`                            | owner flows | Backend owner check                                          |
+| `PLAUSIBLE_BASE_URL`                               | optional    | Defaults to `https://plausible.io`                           |
+| `PLAUSIBLE_SITE_ID` / `PLAUSIBLE_API_TOKEN`        | optional    | Site identifier + server-side API token                      |
+| `DEMO_SEED_ENABLED`                                | local       | Enables demo-user seeding                                    |
+| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD`           | local       | Defaults `demo@nextjs-go.local` / `demo12345`                |
+| `DEMO_USER_USERNAME` / `DEMO_USER_FULL_NAME`       | local       | Defaults `nextjs-go-demo` / `Next.js Go Demo`                |
 
 ### Frontend (`frontend/.env.local`)
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_APP_URL` | optional | Defaults `Template Next.js Go` / `http://localhost:3000` |
-| `NEXT_PUBLIC_API_BASE_URL` | ✅ | API base, e.g. `http://localhost:8080/api/v1` |
-| `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL` | owner flows | Frontend owner check |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC` | optional | Plausible domain + script URL |
-| `NEXT_PUBLIC_DEMO_EMAIL` / `NEXT_PUBLIC_DEMO_PASSWORD` | local | Demo credentials shown on the login screen |
+| Variable                                                            | Required    | Notes                                                    |
+| ------------------------------------------------------------------- | ----------- | -------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_APP_URL`                      | optional    | Defaults `Template Next.js Go` / `http://localhost:3000` |
+| `NEXT_PUBLIC_API_BASE_URL`                                          | ✅          | API base, e.g. `http://localhost:8080/api/v1`            |
+| `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL`                                 | owner flows | Frontend owner check                                     |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC` | optional    | Plausible domain + script URL                            |
+| `NEXT_PUBLIC_DEMO_EMAIL` / `NEXT_PUBLIC_DEMO_PASSWORD`              | local       | Demo credentials shown on the login screen               |
 
 ### Docker Compose (shell / `.env`)
 
-| Variable | Required | Notes |
-| --- | --- | --- |
-| `BACKEND_PORT` / `FRONTEND_PORT` | optional | Host ports for the API/app, defaults `8080` / `3000` |
-| `NEXT_PUBLIC_API_BASE_URL` | prod profile | Build-time API URL, default `http://localhost:8080/api/v1` |
+| Variable                         | Required     | Notes                                                      |
+| -------------------------------- | ------------ | ---------------------------------------------------------- |
+| `BACKEND_PORT` / `FRONTEND_PORT` | optional     | Host ports for the API/app, defaults `8080` / `3000`       |
+| `NEXT_PUBLIC_API_BASE_URL`       | prod profile | Build-time API URL, default `http://localhost:8080/api/v1` |
 
 ## Usage
 
@@ -215,6 +216,6 @@ Copy each `*.example` file to its real counterpart. Generated files are gitignor
 - **Auth removal** — auth can be removed by following [docs/remove-auth.md](docs/remove-auth.md); it is documented deletion, not a runtime flag.
 - **CI** — `.github/workflows/template-ci.yml` runs contract, frontend, backend, and hygiene jobs; `e2e.yml` runs Playwright; `codeql.yml` scans JavaScript/TypeScript and Go. Dependabot updates npm, Go modules, and Actions weekly.
 - **Deployment** — the backend README recommends a frontend host such as Vercel or Netlify, a backend host such as Railway, Render, or Fly.io, and a PostgreSQL provider. Both apps include Dockerfiles, and the API applies migrations on boot.
-- **Migrations** — keep `backend/migrations/` and `backend/internal/repository/migrations/` identical; the first is for manual deploys, the second is embedded in the binary.
+- **Migrations** — single source of truth in `backend/migrations/`; embedded directly into the Go binary via `embed.FS` and applied on boot.
 - **Limits** — frontend tokens live in memory, and public auth endpoints are rate-limited in memory (20 requests/minute per IP). Add an edge limiter for multi-replica deployments.
 - **License** — MIT, copyright netparamad. See [LICENSE](LICENSE). Subproject docs: [frontend](frontend/README.md), [backend](backend/README.md), [docs](docs/).

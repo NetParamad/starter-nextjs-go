@@ -20,9 +20,14 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "check": "node scripts/check.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "e2e:install": "npm --prefix frontend exec playwright install chromium"
+    "e2e:install": "npm --prefix frontend exec playwright install chromium",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.13.0"
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1"
   }
 }

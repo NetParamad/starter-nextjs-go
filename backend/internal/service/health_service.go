@@ -8,16 +8,16 @@ import (
 	"github.com/netparamad/template-nextjs-go/backend/internal/domain"
 )
 
-type pinger interface {
+type Pinger interface {
 	Ping(context.Context) error
 }
 
 type HealthService struct {
 	cfg config.Config
-	db  pinger
+	db  Pinger
 }
 
-func NewHealthService(cfg config.Config, db pinger) HealthService {
+func NewHealthService(cfg config.Config, db Pinger) HealthService {
 	return HealthService{cfg: cfg, db: db}
 }
 

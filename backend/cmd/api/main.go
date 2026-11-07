@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,23 +20,41 @@ func main() {
 	_ = godotenv.Load()
 
 	cfg := config.Load()
+	if cfg.App.Env == "production" {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	}
+
 	if err := cfg.ValidateProduction(); err != nil {
-		log.Fatalf("invalid production configuration: %v", err)
+		slog.Error("invalid production configuration", "error", err)
+		os.Exit(1)
 	}
 	ctx := context.Background()
 
 	db, err := repository.NewPostgresPool(ctx, cfg)
 	if err != nil {
-		log.Fatalf("failed to connect to postgres: %v", err)
+		slog.Error("failed to connect to postgres", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	if err := repository.RunMigrations(ctx, db); err != nil {
-		log.Fatalf("failed to run database migrations: %v", err)
+	if cfg.App.AutoMigrate {
+		if err := repository.RunMigrations(ctx, db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			os.Exit(1)
+		}
 	}
 
-	if err := repository.SeedDemoData(ctx, db, cfg); err != nil {
-		log.Fatalf("failed to seed demo data: %v", err)
+	if cfg.Demo.SeedEnabled {
+		if cfg.App.Env == "production" {
+			slog.Warn("skipping demo seed because APP_ENV is production")
+		} else {
+			if err := repository.SeedDemoData(ctx, db, cfg); err != nil {
+				slog.Error("failed to seed demo data", "error", err)
+				os.Exit(1)
+			}
+		}
 	}
 
 	srv := &http.Server{
@@ -48,8 +66,7 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Printf("starting %s on %s", cfg.App.Name, cfg.Address())
-	log.Printf("database url configured for %s", cfg.DB.Name)
+	slog.Info("starting server", "app", cfg.App.Name, "address", cfg.Address(), "env", cfg.App.Env)
 
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -62,15 +79,17 @@ func main() {
 	select {
 	case err := <-serverErrors:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	case sig := <-shutdownSignals:
-		log.Printf("received %s, shutting down %s", sig.String(), cfg.App.Name)
+		slog.Info("received shutdown signal", "signal", sig.String(), "app", cfg.App.Name)
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if err := srv.Shutdown(shutdownCtx); err != nil {
-			log.Fatalf("graceful shutdown failed: %v", err)
+			slog.Error("graceful shutdown failed", "error", err)
+			os.Exit(1)
 		}
 	}
 }

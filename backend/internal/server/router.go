@@ -5,13 +5,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/netparamad/template-nextjs-go/backend/internal/audit"
 	"github.com/netparamad/template-nextjs-go/backend/internal/config"
 	httpHandler "github.com/netparamad/template-nextjs-go/backend/internal/handler/http"
 	"github.com/netparamad/template-nextjs-go/backend/internal/repository"
@@ -23,22 +25,39 @@ func NewRouter(cfg config.Config, db *pgxpool.Pool) http.Handler {
 
 	userRepository := repository.NewUserRepository(db)
 
-	healthService := service.NewHealthService(cfg, db)
+	var pinger service.Pinger
+	if db != nil {
+		pinger = db
+	}
+	healthService := service.NewHealthService(cfg, pinger)
 	authService := service.NewAuthService(cfg, userRepository)
-	analyticsService := service.NewAnalyticsService(cfg)
 
 	healthHandler := httpHandler.NewHealthHandler(healthService)
-	authHandler := httpHandler.NewAuthHandler(authService)
-	analyticsHandler := httpHandler.NewAnalyticsHandler(analyticsService)
+	authHandler := httpHandler.NewAuthHandler(authService, audit.NewLogger(nil))
 
+	metrics := NewMetrics(db)
+
+	mux.Handle("GET /metrics", metrics.Handler())
 	mux.HandleFunc("GET /health", healthHandler.Get)
-	registerAuthRoutes(mux, authService, authHandler)
-	mux.Handle(
-		"GET /api/v1/analytics/overview",
-		authMiddleware(authService, ownerOnlyMiddleware(cfg, userRepository, http.HandlerFunc(analyticsHandler.Overview))),
-	)
+	mux.HandleFunc("GET /livez", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"live"}`))
+	})
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := db.Ping(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"unavailable","database":"down"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ready","database":"connected"}`))
+	})
 
-	return withCORS(cfg, withSecurityHeaders(withRequestID(withLogging(mux))))
+	registerAuthRoutes(mux, authService, authHandler)
+
+	return withRecovery(metrics.Middleware(withCORS(cfg, withSecurityHeaders(withRequestID(withLogging(mux))))))
 }
 
 // registerAuthRoutes wires every auth endpoint in one place. Removing auth
@@ -49,10 +68,6 @@ func registerAuthRoutes(mux *http.ServeMux, authService service.AuthService, aut
 
 	mux.Handle("POST /api/v1/auth/register", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Register)))
 	mux.Handle("POST /api/v1/auth/login", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Login)))
-	mux.Handle("POST /api/v1/auth/verify-email", withRateLimit(authLimiter, http.HandlerFunc(authHandler.VerifyEmail)))
-	mux.Handle("POST /api/v1/auth/resend-verification", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ResendVerificationEmail)))
-	mux.Handle("POST /api/v1/auth/forgot-password", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ForgotPassword)))
-	mux.Handle("POST /api/v1/auth/reset-password", withRateLimit(authLimiter, http.HandlerFunc(authHandler.ResetPassword)))
 	mux.Handle("POST /api/v1/auth/refresh", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Refresh)))
 	mux.Handle("POST /api/v1/auth/logout", withRateLimit(authLimiter, http.HandlerFunc(authHandler.Logout)))
 	mux.Handle("GET /api/v1/auth/me", authMiddleware(authService, http.HandlerFunc(authHandler.Me)))
@@ -89,30 +104,28 @@ func randomID() string {
 	return hex.EncodeToString(buffer)
 }
 
-func ownerOnlyMiddleware(cfg config.Config, users repository.UserRepository, next http.Handler) http.Handler {
+type statusRecorder struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (r *statusRecorder) WriteHeader(statusCode int) {
+	r.statusCode = statusCode
+	r.ResponseWriter.WriteHeader(statusCode)
+}
+
+func withRecovery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if cfg.Analytics.DashboardOwnerEmail == "" {
-			httpHandler.WriteErrorPublic(w, http.StatusForbidden, "dashboard owner email is not configured")
-			return
-		}
-
-		userID, ok := httpHandler.UserIDFromContext(r.Context())
-		if !ok {
-			httpHandler.WriteErrorPublic(w, http.StatusUnauthorized, "missing authenticated user")
-			return
-		}
-
-		user, err := users.FindByID(r.Context(), userID)
-		if err != nil {
-			httpHandler.WriteErrorPublic(w, http.StatusUnauthorized, "user no longer exists")
-			return
-		}
-
-		if strings.ToLower(strings.TrimSpace(user.Email)) != cfg.Analytics.DashboardOwnerEmail {
-			httpHandler.WriteErrorPublic(w, http.StatusForbidden, "dashboard access is restricted")
-			return
-		}
-
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("panic recovered",
+					"error", rec,
+					"stack", string(debug.Stack()),
+					"request_id", w.Header().Get("X-Request-ID"),
+				)
+				httpHandler.WriteErrorPublic(w, http.StatusInternalServerError, "internal server error")
+			}
+		}()
 		next.ServeHTTP(w, r)
 	})
 }
@@ -120,8 +133,28 @@ func ownerOnlyMiddleware(cfg config.Config, users repository.UserRepository, nex
 func withLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s request_id=%s", r.Method, r.URL.Path, time.Since(start), w.Header().Get("X-Request-ID"))
+		rec := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+		next.ServeHTTP(rec, r)
+
+		duration := time.Since(start)
+		requestID := w.Header().Get("X-Request-ID")
+		status := rec.statusCode
+
+		attrs := []any{
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", status,
+			"duration_ms", duration.Milliseconds(),
+			"request_id", requestID,
+		}
+
+		if status >= 500 {
+			slog.Error("http request", attrs...)
+		} else if status >= 400 {
+			slog.Warn("http request", attrs...)
+		} else {
+			slog.Info("http request", attrs...)
+		}
 	})
 }
 
@@ -133,7 +166,8 @@ func withCORS(cfg config.Config, next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
+		w.Header().Set("Access-Control-Expose-Headers", "X-Request-ID")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

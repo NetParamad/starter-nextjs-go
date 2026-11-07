@@ -1,5 +1,4 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { Clock3, Eye, ShieldCheck, UserRound } from "lucide-react";
+import { Clock3, CheckCircle2, ShieldCheck, UserRound } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,11 +10,9 @@ import {
   DashboardHero,
   DashboardShell,
 } from "@/features/dashboard/components/dashboard-shell";
-import type { AnalyticsOverview } from "@/types/analytics";
 import type { AuthUser } from "@/types/auth";
 
 type DashboardOwnerViewProps = {
-  analyticsQuery: UseQueryResult<AnalyticsOverview, Error>;
   user: AuthUser;
 };
 
@@ -30,26 +27,8 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
-export function DashboardOwnerView({
-  analyticsQuery,
-  user,
-}: DashboardOwnerViewProps) {
+export function DashboardOwnerView({ user }: DashboardOwnerViewProps) {
   const displayName = user.full_name || user.username;
-
-  const analyticsCards = analyticsQuery.data
-    ? [
-        { label: "Visitors", value: analyticsQuery.data.visitors },
-        { label: "Pageviews", value: analyticsQuery.data.pageviews },
-        { label: "Views / Visit", value: analyticsQuery.data.views_per_visit },
-        { label: "Bounce Rate", value: analyticsQuery.data.bounce_rate },
-        { label: "Visit Duration", value: analyticsQuery.data.visit_duration },
-        {
-          label: "Window",
-          note: analyticsQuery.data.source,
-          value: analyticsQuery.data.date_range,
-        },
-      ]
-    : [];
 
   return (
     <DashboardShell>
@@ -58,9 +37,8 @@ export function DashboardOwnerView({
         title="Review owner access, account context, and analytics from one private workspace."
         description={
           <p>
-            This dashboard keeps the private account layer and analytics view
-            intact without surfacing the removed sample content management
-            flows.
+            Welcome to your private dashboard. This workspace is protected by
+            JWT authentication connected to the Go backend.
           </p>
         }
         secondaryHref="/"
@@ -104,7 +82,7 @@ export function DashboardOwnerView({
           <CardHeader>
             <CardTitle>Session Overview</CardTitle>
             <CardDescription>
-              The current owner session context available to the app shell.
+              The current authenticated session context from the Go API.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -113,7 +91,7 @@ export function DashboardOwnerView({
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Name
                 </p>
-                <p className="text-sm">{displayName}</p>
+                <p className="text-sm font-semibold">{displayName}</p>
               </div>
               <div className="grid gap-1">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
@@ -138,13 +116,11 @@ export function DashboardOwnerView({
             </div>
 
             <div className="bg-muted rounded-lg p-4">
-              <p className="text-sm font-semibold">
-                What this dashboard still demonstrates
-              </p>
+              <p className="text-sm font-semibold">Starter Features</p>
               <ul className="text-muted-foreground mt-2 grid list-disc gap-1 pl-5 text-sm">
-                <li>Owner-only route protection on the frontend and backend</li>
-                <li>Authenticated session hydration for the signed-in user</li>
-                <li>A private analytics surface wired through the Go API</li>
+                <li>Authenticated session persistence across page refreshes</li>
+                <li>Single-use refresh token rotation in PostgreSQL</li>
+                <li>Next.js App Router frontend with Go API backend</li>
               </ul>
             </div>
           </CardContent>
@@ -152,77 +128,40 @@ export function DashboardOwnerView({
 
         <Card>
           <CardHeader>
-            <CardTitle>Visitors Analytics</CardTitle>
+            <CardTitle>System & API Status</CardTitle>
             <CardDescription>
-              Real traffic numbers from the protected analytics backend
-              endpoint.
+              Full-stack connectivity verification.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {analyticsQuery.isError ? (
-              <p className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm">
-                {analyticsQuery.error instanceof Error
-                  ? analyticsQuery.error.message
-                  : "Failed to load analytics."}
-              </p>
-            ) : null}
-            {analyticsQuery.isLoading ? (
-              <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-sm">
-                  Loading analytics overview...
+            <div className="flex items-center gap-3 rounded-lg border p-4">
+              <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+              <div>
+                <p className="text-sm font-semibold">API Backend Connected</p>
+                <p className="text-muted-foreground text-xs">
+                  Your Next.js client is communicating securely with Go.
                 </p>
               </div>
-            ) : analyticsQuery.data ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {analyticsCards.map((card) => (
-                  <div key={card.label} className="rounded-lg border p-4">
-                    <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                      {card.label}
-                    </p>
-                    <p className="mt-1 text-2xl font-bold">{card.value}</p>
-                    {card.note ? (
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {card.note}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center gap-2">
-                  <Eye className="text-muted-foreground h-5 w-5" />
-                  <p className="font-semibold">
-                    Analytics is not configured yet.
-                  </p>
-                </div>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Configure the Plausible tracking script in the frontend and
-                  the Plausible API credentials in the backend to start seeing
-                  live visitor numbers here.
-                </p>
-              </div>
-            )}
-            <div className="rounded-lg border p-4">
-              <p className="text-sm font-semibold">
-                What you can already see now
-              </p>
-              <ul className="text-muted-foreground mt-2 grid list-disc gap-1 pl-5 text-sm">
-                <li>
-                  Real visitor, pageview, bounce-rate, and duration numbers when
-                  Plausible is configured
-                </li>
-                <li>Whether the owner-only backend route is wired correctly</li>
-                <li>
-                  Whether your frontend and backend environment config align
-                </li>
-              </ul>
             </div>
-            <p className="text-muted-foreground text-xs">
-              The analytics API key stays on the backend only. The dashboard
-              fetches aggregated stats through your authenticated owner-only
-              backend route.
-            </p>
+
+            <div className="grid gap-3 rounded-lg border p-4 text-sm">
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">Frontend</span>
+                <span className="font-medium">Next.js 16 (App Router)</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">Backend API</span>
+                <span className="font-medium">Go 1.25 Standard Library</span>
+              </div>
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">Database</span>
+                <span className="font-medium">PostgreSQL (pgx pool)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Authentication</span>
+                <span className="font-medium">JWT (Access + Refresh)</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </section>

@@ -8,12 +8,10 @@ import (
 )
 
 type Config struct {
-	App       AppConfig
-	DB        DBConfig
-	JWT       JWTConfig
-	Mail      MailConfig
-	Analytics AnalyticsConfig
-	Demo      DemoConfig
+	App  AppConfig
+	DB   DBConfig
+	JWT  JWTConfig
+	Demo DemoConfig
 }
 
 type AppConfig struct {
@@ -24,6 +22,7 @@ type AppConfig struct {
 	BaseURL     string
 	FrontendURL string
 	Version     string
+	AutoMigrate bool
 	CORS        CORSConfig
 }
 
@@ -40,6 +39,8 @@ type DBConfig struct {
 	Password string
 	SSLMode  string
 	Schema   string
+	MaxConns int
+	MinConns int
 }
 
 type JWTConfig struct {
@@ -47,23 +48,6 @@ type JWTConfig struct {
 	RefreshSecret    string
 	AccessTTLMinutes int
 	RefreshTTLHours  int
-}
-
-type MailConfig struct {
-	From         string
-	ResendAPIKey string
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUser     string
-	SMTPPass     string
-}
-
-type AnalyticsConfig struct {
-	Provider            string
-	DashboardOwnerEmail string
-	PlausibleBaseURL    string
-	PlausibleSiteID     string
-	PlausibleAPIToken   string
 }
 
 type DemoConfig struct {
@@ -84,6 +68,7 @@ func Load() Config {
 			BaseURL:     getEnv("APP_BASE_URL", "http://localhost:8080"),
 			FrontendURL: getEnv("FRONTEND_APP_URL", "http://localhost:3000"),
 			Version:     getEnv("APP_VERSION", "0.1.0"),
+			AutoMigrate: getEnvAsBool("AUTO_MIGRATE", true),
 			CORS: CORSConfig{
 				AllowedOrigins: getEnvAsSlice(
 					"CORS_ALLOWED_ORIGINS",
@@ -100,27 +85,14 @@ func Load() Config {
 			Password: getEnv("DB_PASSWORD", "postgres"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			Schema:   getEnv("DB_SCHEMA", "public"),
+			MaxConns: getEnvAsInt("DB_MAX_CONNS", 10),
+			MinConns: getEnvAsInt("DB_MIN_CONNS", 2),
 		},
 		JWT: JWTConfig{
 			AccessSecret:     getEnv("JWT_ACCESS_SECRET", "change-me-access"),
 			RefreshSecret:    getEnv("JWT_REFRESH_SECRET", "change-me-refresh"),
 			AccessTTLMinutes: getEnvAsInt("JWT_ACCESS_TTL_MINUTES", 15),
 			RefreshTTLHours:  getEnvAsInt("JWT_REFRESH_TTL_HOURS", 720),
-		},
-		Mail: MailConfig{
-			From:         getEnv("MAIL_FROM", "noreply@example.local"),
-			ResendAPIKey: getEnv("RESEND_API_KEY", ""),
-			SMTPHost:     getEnv("SMTP_HOST", ""),
-			SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
-			SMTPUser:     getEnv("SMTP_USER", ""),
-			SMTPPass:     getEnv("SMTP_PASS", ""),
-		},
-		Analytics: AnalyticsConfig{
-			Provider:            strings.ToLower(getEnv("ANALYTICS_PROVIDER", "")),
-			DashboardOwnerEmail: strings.ToLower(strings.TrimSpace(getEnv("DASHBOARD_OWNER_EMAIL", ""))),
-			PlausibleBaseURL:    getEnv("PLAUSIBLE_BASE_URL", "https://plausible.io"),
-			PlausibleSiteID:     getEnv("PLAUSIBLE_SITE_ID", ""),
-			PlausibleAPIToken:   getEnv("PLAUSIBLE_API_TOKEN", ""),
 		},
 		Demo: DemoConfig{
 			SeedEnabled: getEnvAsBool("DEMO_SEED_ENABLED", false),

@@ -1,19 +1,15 @@
 import type { paths } from "@/generated/openapi";
-import { buildApiUrl } from "@/lib/api";
+import { buildApiUrl, generateRequestId } from "@/lib/api";
 import type {
   AuthResponse,
   AuthSession,
   AuthUser,
-  ForgotPasswordInput,
   LoginInput,
   LogoutInput,
   RefreshInput,
   RefreshResponse,
   RegisterResponse,
   RegisterInput,
-  ResendVerificationInput,
-  ResetPasswordInput,
-  VerifyEmailInput,
 } from "@/types/auth";
 
 type MeResponse =
@@ -41,31 +37,12 @@ async function parseJson<T>(response: Response): Promise<T> {
   return payload as T;
 }
 
-async function parseNoContent(
-  response: Response,
-  missingRouteMessage: string,
-): Promise<void> {
-  if (response.ok) {
-    return;
-  }
-
-  if (response.status === 404) {
-    throw new Error(missingRouteMessage);
-  }
-
-  const payload = (await response.json().catch(() => null)) as {
-    error?: string;
-  } | null;
-  throw new Error(
-    payload?.error || `Request failed with status ${response.status}`,
-  );
-}
-
 export async function login(input: LoginInput): Promise<AuthSession> {
   const response = await fetch(buildApiUrl("/auth/login"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Request-ID": generateRequestId(),
     },
     body: JSON.stringify(input),
   });
@@ -80,6 +57,7 @@ export async function register(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Request-ID": generateRequestId(),
     },
     body: JSON.stringify(input),
   });
@@ -94,6 +72,7 @@ export async function refreshSession(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Request-ID": generateRequestId(),
     },
     body: JSON.stringify(input),
   });
@@ -106,6 +85,7 @@ export async function logout(input: LogoutInput): Promise<void> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Request-ID": generateRequestId(),
     },
     body: JSON.stringify(input),
   });
@@ -120,74 +100,11 @@ export async function getCurrentUser(accessToken: string): Promise<AuthUser> {
   const response = await fetch(buildApiUrl("/auth/me"), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      "X-Request-ID": generateRequestId(),
     },
     cache: "no-store",
   });
 
   const payload = await parseJson<MeResponse>(response);
   return payload.data;
-}
-
-export async function forgotPassword(
-  input: ForgotPasswordInput,
-): Promise<void> {
-  const response = await fetch(buildApiUrl("/auth/forgot-password"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  return parseNoContent(
-    response,
-    "Password reset email is not available yet because the backend route is still missing.",
-  );
-}
-
-export async function resetPassword(input: ResetPasswordInput): Promise<void> {
-  const response = await fetch(buildApiUrl("/auth/reset-password"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  return parseNoContent(
-    response,
-    "Reset password is not available yet because the backend route is still missing.",
-  );
-}
-
-export async function verifyEmail(input: VerifyEmailInput): Promise<void> {
-  const response = await fetch(buildApiUrl("/auth/verify-email"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  return parseNoContent(
-    response,
-    "Email verification is not available yet because the backend route is still missing.",
-  );
-}
-
-export async function resendVerification(
-  input: ResendVerificationInput,
-): Promise<void> {
-  const response = await fetch(buildApiUrl("/auth/resend-verification"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  return parseNoContent(
-    response,
-    "Resend verification is not available yet because the backend route is still missing.",
-  );
 }

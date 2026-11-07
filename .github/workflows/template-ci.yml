@@ -58,6 +58,9 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
       - name: Production build
         run: npm run build
 
@@ -89,6 +92,12 @@ jobs:
       - name: Build
         run: go build ./...
 
+      - name: Security scan (govulncheck)
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: backend/go.mod
+          work-dir: backend
+
   hygiene:
     runs-on: ubuntu-latest
     steps:
@@ -114,3 +123,55 @@ jobs:
 
       - name: Secret scan
         run: npm run check:secrets
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: template-nextjs-go-backend:test
+
+      - name: Build frontend container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: template-nextjs-go-frontend:test
+
+      - name: Scan backend container with Trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: template-nextjs-go-backend:test
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+      - name: Scan frontend container with Trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: template-nextjs-go-frontend:test
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+      - name: Generate SBOM for backend
+        uses: anchore/sbom-action@v0
+        with:
+          image: template-nextjs-go-backend:test
+          artifact-name: backend-sbom.spdx.json
+
+      - name: Generate SBOM for frontend
+        uses: anchore/sbom-action@v0
+        with:
+          image: template-nextjs-go-frontend:test
+          artifact-name: frontend-sbom.spdx.json

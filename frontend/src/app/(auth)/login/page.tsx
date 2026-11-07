@@ -24,7 +24,6 @@ export default function LoginPage() {
           placeholder: "Enter your password",
         },
       ]}
-      secondaryLink={{ href: "/forgot-password", label: "Forgot password?" }}
     />
   );
 }

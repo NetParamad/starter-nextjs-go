@@ -17,8 +17,3 @@ export type RefreshResponse = components["schemas"]["AuthResponse"];
 
 export type LoginInput = components["schemas"]["LoginInput"];
 export type RegisterInput = components["schemas"]["RegisterInput"];
-export type ForgotPasswordInput = components["schemas"]["ForgotPasswordInput"];
-export type ResetPasswordInput = components["schemas"]["ResetPasswordInput"];
-export type VerifyEmailInput = components["schemas"]["VerifyEmailInput"];
-export type ResendVerificationInput =
-  components["schemas"]["ResendVerificationInput"];

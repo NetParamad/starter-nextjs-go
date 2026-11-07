@@ -15,10 +15,26 @@ func NewPostgresPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, err
 		return nil, err
 	}
 
-	poolConfig.MaxConns = 10
-	poolConfig.MinConns = 2
+	maxConns := int32(cfg.DB.MaxConns)
+	if maxConns <= 0 {
+		maxConns = 10
+	}
+	minConns := int32(cfg.DB.MinConns)
+	if minConns < 0 {
+		minConns = 0
+	}
+
+	poolConfig.MaxConns = maxConns
+	poolConfig.MinConns = minConns
 	poolConfig.MaxConnLifetime = 30 * time.Minute
 	poolConfig.MaxConnIdleTime = 5 * time.Minute
+
+	if poolConfig.ConnConfig.RuntimeParams == nil {
+		poolConfig.ConnConfig.RuntimeParams = make(map[string]string)
+	}
+	// Enterprise safeguards: abort runaway statements and dangling transactions
+	poolConfig.ConnConfig.RuntimeParams["statement_timeout"] = "5000"
+	poolConfig.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "10000"
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {

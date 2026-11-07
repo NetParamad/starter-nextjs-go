@@ -20,6 +20,7 @@ type User struct {
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 	PasswordHash string     `json:"-"`
 }
 
@@ -33,23 +34,6 @@ type RegisterInput struct {
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-type ForgotPasswordInput struct {
-	Email string `json:"email"`
-}
-
-type ResetPasswordInput struct {
-	Token    string `json:"token"`
-	Password string `json:"password"`
-}
-
-type VerifyEmailInput struct {
-	Token string `json:"token"`
-}
-
-type ResendVerificationInput struct {
-	Email string `json:"email"`
 }
 
 type AuthResponse struct {
@@ -72,14 +56,4 @@ type LogoutInput struct {
 type RegisterResponse struct {
 	Message string `json:"message"`
 	User    User   `json:"user"`
-}
-
-type AnalyticsOverview struct {
-	Visitors      int64  `json:"visitors"`
-	Pageviews     int64  `json:"pageviews"`
-	ViewsPerVisit string `json:"views_per_visit"`
-	BounceRate    string `json:"bounce_rate"`
-	VisitDuration string `json:"visit_duration"`
-	DateRange     string `json:"date_range"`
-	Source        string `json:"source"`
 }

@@ -6,20 +6,15 @@ import { DashboardPreviewView } from "@/features/dashboard/components/dashboard-
 import { useDashboardPageState } from "@/features/dashboard/hooks/use-dashboard-page-state";
 
 export function DashboardPageClient() {
-  const { analyticsQuery, isLoading, ownerEmail, showOwnerDashboard, user } =
-    useDashboardPageState();
+  const { isLoading, user } = useDashboardPageState();
 
   if (isLoading) {
     return <DashboardLoadingState />;
   }
 
-  if (!showOwnerDashboard) {
-    return <DashboardPreviewView ownerEmail={ownerEmail} />;
-  }
-
   if (!user) {
-    return null;
+    return <DashboardPreviewView />;
   }
 
-  return <DashboardOwnerView analyticsQuery={analyticsQuery} user={user} />;
+  return <DashboardOwnerView user={user} />;
 }

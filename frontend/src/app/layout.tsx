@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
-import { PlausibleAnalytics } from "@/components/plausible-analytics";
 import { RootShell } from "@/layouts/root-shell";
 import { appConfig } from "@/lib/app-config";
 
@@ -61,7 +60,6 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <RootShell>{children}</RootShell>
-        <PlausibleAnalytics />
       </body>
     </html>
   );

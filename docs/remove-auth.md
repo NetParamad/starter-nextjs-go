@@ -11,24 +11,19 @@ accounts, remove auth in this order. Each step keeps `npm run check` and
    function itself.
 2. Delete `backend/internal/handler/http/auth_handler.go`.
 3. Delete auth methods from `backend/internal/service/auth_service.go`
-   (`Register`, `Login`, `Refresh`, `Logout`, `Me`, `ForgotPassword`,
-   `ResetPassword`, `VerifyEmail`, `ResendVerificationEmail`,
-   `buildAuthResponse`) — or the whole file if nothing else uses it.
+   (`Register`, `Login`, `Refresh`, `Logout`, `Me`, `buildAuthResponse`) —
+   or the whole file if nothing else uses it.
 4. Decide what stays in `backend/internal/repository/user_repository.go`:
-   keep user CRUD if your app still has users, drop the token methods
-   (`*PasswordResetToken*`, `*EmailVerificationToken*`,
-   `*RefreshToken*`) otherwise.
-5. Drop the token tables. Easiest is a new migration, e.g.
-   `migrations/000006_drop_auth_tokens.up.sql`:
+   keep user CRUD if your app still has users, drop the session methods
+   (`*RefreshToken*`) otherwise.
+5. Drop the session table. Easiest is a new migration, e.g.
+   `migrations/000002_drop_user_sessions.up.sql`:
    ```sql
-   DROP TABLE IF EXISTS password_reset_tokens;
-   DROP TABLE IF EXISTS email_verification_tokens;
    DROP TABLE IF EXISTS user_sessions;
    ```
-   Mirror it into `internal/repository/migrations/` (see
-   backend README, Database section).
-6. Remove auth env from `backend/.env.example` (`JWT_*`, `MAIL_*`,
-   `SMTP_*`, `DEMO_*`, `DASHBOARD_OWNER_EMAIL`) and the
+   The API will automatically embed and run it on next boot.
+6. Remove auth env from `backend/.env.example` (`JWT_*`,
+   `DEMO_*`, `DASHBOARD_OWNER_EMAIL`) and the
    `ValidateProduction` JWT check in
    `backend/internal/config/config.go` if it no longer applies.
 7. Adapt or delete the analytics owner route in `router.go`

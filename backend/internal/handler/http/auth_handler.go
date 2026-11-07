@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/netparamad/template-nextjs-go/backend/internal/audit"
 	"github.com/netparamad/template-nextjs-go/backend/internal/domain"
 	"github.com/netparamad/template-nextjs-go/backend/internal/repository"
 	"github.com/netparamad/template-nextjs-go/backend/internal/service"
@@ -12,10 +13,14 @@ import (
 
 type AuthHandler struct {
 	service service.AuthService
+	audit   *audit.Logger
 }
 
-func NewAuthHandler(service service.AuthService) AuthHandler {
-	return AuthHandler{service: service}
+func NewAuthHandler(service service.AuthService, auditLogger *audit.Logger) AuthHandler {
+	if auditLogger == nil {
+		auditLogger = audit.NewLogger(nil)
+	}
+	return AuthHandler{service: service, audit: auditLogger}
 }
 
 func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -25,8 +30,21 @@ func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	meta := sessionMetaFromRequest(r)
+	requestID := r.Header.Get("X-Request-ID")
+
 	response, err := h.service.Register(r.Context(), input)
 	if err != nil {
+		h.audit.Log(r.Context(), audit.Record{
+			Event:     audit.EventRegisterFailure,
+			Email:     input.Email,
+			IPAddress: meta.IPAddress,
+			UserAgent: meta.UserAgent,
+			RequestID: requestID,
+			Status:    "FAILURE",
+			Reason:    err.Error(),
+		})
+
 		switch {
 		case errors.Is(err, service.ErrInvalidInput):
 			writeError(w, http.StatusBadRequest, "username, email, and password must be valid")
@@ -38,6 +56,16 @@ func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.audit.Log(r.Context(), audit.Record{
+		Event:     audit.EventRegisterSuccess,
+		ActorID:   response.User.ID,
+		Email:     response.User.Email,
+		IPAddress: meta.IPAddress,
+		UserAgent: meta.UserAgent,
+		RequestID: requestID,
+		Status:    "SUCCESS",
+	})
+
 	writeJSON(w, http.StatusCreated, response)
 }
 
@@ -48,106 +76,43 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.Login(r.Context(), input, sessionMetaFromRequest(r))
+	meta := sessionMetaFromRequest(r)
+	requestID := r.Header.Get("X-Request-ID")
+
+	response, err := h.service.Login(r.Context(), input, meta)
 	if err != nil {
+		h.audit.Log(r.Context(), audit.Record{
+			Event:     audit.EventLoginFailure,
+			Email:     input.Email,
+			IPAddress: meta.IPAddress,
+			UserAgent: meta.UserAgent,
+			RequestID: requestID,
+			Status:    "FAILURE",
+			Reason:    err.Error(),
+		})
+
 		switch {
 		case errors.Is(err, service.ErrInvalidInput):
 			writeError(w, http.StatusBadRequest, "email and password are required")
 		case errors.Is(err, service.ErrInvalidCredentials):
 			writeError(w, http.StatusUnauthorized, "invalid email or password")
-		case errors.Is(err, service.ErrEmailNotVerified):
-			writeError(w, http.StatusForbidden, "please verify your email before logging in")
 		default:
 			writeError(w, http.StatusInternalServerError, "failed to login")
 		}
 		return
 	}
 
+	h.audit.Log(r.Context(), audit.Record{
+		Event:     audit.EventLoginSuccess,
+		ActorID:   response.User.ID,
+		Email:     response.User.Email,
+		IPAddress: meta.IPAddress,
+		UserAgent: meta.UserAgent,
+		RequestID: requestID,
+		Status:    "SUCCESS",
+	})
+
 	writeJSON(w, http.StatusOK, response)
-}
-
-func (h AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
-	var input domain.ForgotPasswordInput
-	if err := readJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if err := h.service.ForgotPassword(r.Context(), input); err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidInput):
-			writeError(w, http.StatusBadRequest, "email is required")
-		default:
-			writeError(w, http.StatusInternalServerError, "failed to process password reset request")
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	var input domain.VerifyEmailInput
-	if err := readJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if err := h.service.VerifyEmail(r.Context(), input); err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidInput):
-			writeError(w, http.StatusBadRequest, "verification token is required")
-		case errors.Is(err, service.ErrInvalidCredentials):
-			writeError(w, http.StatusUnauthorized, "invalid or expired verification token")
-		default:
-			writeError(w, http.StatusInternalServerError, "failed to verify email")
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h AuthHandler) ResendVerificationEmail(w http.ResponseWriter, r *http.Request) {
-	var input domain.ResendVerificationInput
-	if err := readJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if err := h.service.ResendVerificationEmail(r.Context(), input); err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidInput):
-			writeError(w, http.StatusBadRequest, "email is required")
-		default:
-			writeError(w, http.StatusInternalServerError, "failed to resend verification email")
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	var input domain.ResetPasswordInput
-	if err := readJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if err := h.service.ResetPassword(r.Context(), input); err != nil {
-		switch {
-		case errors.Is(err, service.ErrInvalidInput):
-			writeError(w, http.StatusBadRequest, "token and a password with at least 8 characters are required")
-		case errors.Is(err, service.ErrInvalidCredentials):
-			writeError(w, http.StatusUnauthorized, "invalid or expired reset token")
-		default:
-			writeError(w, http.StatusInternalServerError, "failed to reset password")
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -157,8 +122,20 @@ func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.Refresh(r.Context(), input, sessionMetaFromRequest(r))
+	meta := sessionMetaFromRequest(r)
+	requestID := r.Header.Get("X-Request-ID")
+
+	response, err := h.service.Refresh(r.Context(), input, meta)
 	if err != nil {
+		h.audit.Log(r.Context(), audit.Record{
+			Event:     audit.EventRefreshFailure,
+			IPAddress: meta.IPAddress,
+			UserAgent: meta.UserAgent,
+			RequestID: requestID,
+			Status:    "FAILURE",
+			Reason:    err.Error(),
+		})
+
 		switch {
 		case errors.Is(err, service.ErrInvalidInput):
 			writeError(w, http.StatusBadRequest, "refresh token is required")
@@ -170,6 +147,16 @@ func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.audit.Log(r.Context(), audit.Record{
+		Event:     audit.EventRefreshSuccess,
+		ActorID:   response.User.ID,
+		Email:     response.User.Email,
+		IPAddress: meta.IPAddress,
+		UserAgent: meta.UserAgent,
+		RequestID: requestID,
+		Status:    "SUCCESS",
+	})
+
 	writeJSON(w, http.StatusOK, response)
 }
 
@@ -180,10 +167,21 @@ func (h AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	meta := sessionMetaFromRequest(r)
+	requestID := r.Header.Get("X-Request-ID")
+
 	if err := h.service.Logout(r.Context(), input); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to log out")
 		return
 	}
+
+	h.audit.Log(r.Context(), audit.Record{
+		Event:     audit.EventLogoutSuccess,
+		IPAddress: meta.IPAddress,
+		UserAgent: meta.UserAgent,
+		RequestID: requestID,
+		Status:    "SUCCESS",
+	})
 
 	w.WriteHeader(http.StatusNoContent)
 }

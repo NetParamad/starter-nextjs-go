@@ -3,12 +3,24 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 8000;
 
 export class ApiError extends Error {
   status: number;
+  requestId?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, requestId?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.requestId = requestId;
   }
+}
+
+export function generateRequestId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  }
+  return Math.random().toString(36).substring(2, 18);
 }
 
 export function getApiBaseUrl() {
@@ -46,19 +58,28 @@ export async function fetchJson<T>(
     init?.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
   );
 
+  const requestId = generateRequestId();
+
   try {
     const response = await fetch(buildApiUrl(path), {
       ...init,
       signal: init?.signal ?? timeout.signal,
       headers: {
         "Content-Type": "application/json",
+        "X-Request-ID": requestId,
         ...init?.headers,
       },
       next: init?.next ?? { revalidate: 30 },
     });
 
     if (!response.ok) {
-      throw new ApiError(await parseError(response), response.status);
+      const responseRequestId =
+        response.headers.get("X-Request-ID") || requestId;
+      throw new ApiError(
+        await parseError(response),
+        response.status,
+        responseRequestId,
+      );
     }
 
     return response.json() as Promise<T>;

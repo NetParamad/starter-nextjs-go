@@ -17,6 +17,25 @@ services:
       timeout: 5s
       retries: 10
 
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.0
+    container_name: template-nextjs-go-pgbouncer
+    restart: unless-stopped
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD: db_password
+      DB_HOST: postgres
+      DB_NAME: app_db
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 20
+      AUTH_TYPE: plain
+    ports:
+      - "${PGBOUNCER_PORT:-6432}:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Full-stack profile for prod-like local runs:
   # docker compose --profile prod up --build
   backend:
@@ -41,6 +60,8 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
+        NEXT_PUBLIC_DEMO_EMAIL: ${DEMO_USER_EMAIL:-demo@nextjs-go.local}
+        NEXT_PUBLIC_DEMO_PASSWORD: ${DEMO_USER_PASSWORD:-demo12345}
     profiles: ["prod"]
     container_name: template-nextjs-go-frontend
     restart: unless-stopped

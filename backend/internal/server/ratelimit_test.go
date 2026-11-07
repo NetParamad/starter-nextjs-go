@@ -69,3 +69,26 @@ func TestWithRateLimitMiddleware(t *testing.T) {
 		t.Fatalf("expected 429, got %d", second.Code)
 	}
 }
+
+func TestClientIPHeaderPrecedence(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "192.168.1.1:12345"
+	if ip := clientIP(req); ip != "192.168.1.1" {
+		t.Fatalf("expected 192.168.1.1, got %s", ip)
+	}
+
+	req.Header.Set("X-Forwarded-For", "203.0.113.195, 70.41.3.18")
+	if ip := clientIP(req); ip != "203.0.113.195" {
+		t.Fatalf("expected 203.0.113.195, got %s", ip)
+	}
+
+	req.Header.Set("X-Real-IP", "198.51.100.1")
+	if ip := clientIP(req); ip != "198.51.100.1" {
+		t.Fatalf("expected 198.51.100.1, got %s", ip)
+	}
+
+	req.Header.Set("CF-Connecting-IP", "1.1.1.1")
+	if ip := clientIP(req); ip != "1.1.1.1" {
+		t.Fatalf("expected 1.1.1.1, got %s", ip)
+	}
+}

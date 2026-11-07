@@ -1,4 +1,7 @@
-FROM golang:1.25.1-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.1-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -6,17 +9,19 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /template-nextjs-go-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /template-nextjs-go-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /template-nextjs-go-migrate ./cmd/migrate
 
-FROM alpine:3.21 AS runner
+# Google Distroless: zero shell, minimal attack surface, nonroot UID 65532, built-in ca-certificates
+FROM gcr.io/distroless/static-debian12:nonroot AS runner
 
-RUN adduser -D -u 10001 appuser
 WORKDIR /app
 
-COPY --from=builder /template-nextjs-go-api /usr/local/bin/template-nextjs-go-api
+COPY --from=builder /template-nextjs-go-api /template-nextjs-go-api
+COPY --from=builder /template-nextjs-go-migrate /template-nextjs-go-migrate
 
 EXPOSE 8080
 
-USER appuser
+USER nonroot:nonroot
 
-CMD ["template-nextjs-go-api"]
+ENTRYPOINT ["/template-nextjs-go-api"]
