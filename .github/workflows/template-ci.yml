@@ -141,6 +141,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./backend
+          load: true
           push: false
           tags: template-nextjs-go-backend:test
 
@@ -148,6 +149,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
+          load: true
           push: false
           tags: template-nextjs-go-frontend:test
 
