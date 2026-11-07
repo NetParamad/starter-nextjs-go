@@ -5,40 +5,50 @@ analytics endpoints, PostgreSQL support, and SQL migrations.
 
 ## Stack
 
-- Go
-- PostgreSQL
-- SQL migrations
-- Layered architecture with `handler`, `service`, and `repository`
+- Go 1.26
+- PostgreSQL 17 + PgBouncer connection pooling
+- `sqlc` type-safe database queries
+- Embedded SQL migrations with standalone CLI
+- Prometheus observability (`/metrics`)
+- Security audit logging (`internal/audit`)
+- Kubernetes production manifests (`deploy/k8s`)
+- Layered architecture: `handler` → `service` → `repository`
 
 ## Structure
 
-`cmd/api`, `internal`, and `migrations`
+- `cmd/api`: HTTP server entrypoint
+- `cmd/migrate`: Standalone database migration CLI
+- `cmd/seed`: Standalone database seeding CLI
+- `internal/audit`: Structured JSON audit trail
+- `internal/repository/db`: sqlc-generated type-safe queries
+- `migrations`: Embedded SQL migrations (up/down)
 
 ## Quick Start
 
 1. From the repo root, run `npm run dev` to start Dockerized Postgres plus the frontend and backend together.
 2. Or in this folder only: copy `.env.example` to `.env`, run `go mod tidy`, and start the API with `go run ./cmd/api`.
 
-Server health endpoint:
+System observability & probes:
 
 ```text
 GET /health
+GET /livez
+GET /readyz
+GET /metrics
 ```
 
 ## Implemented Endpoints
 
 ```text
 GET  /health
+GET  /livez
+GET  /readyz
+GET  /metrics
 POST /api/v1/auth/register
 POST /api/v1/auth/login
-POST /api/v1/auth/verify-email
-POST /api/v1/auth/resend-verification
-POST /api/v1/auth/forgot-password
-POST /api/v1/auth/reset-password
 POST /api/v1/auth/refresh
 POST /api/v1/auth/logout
 GET  /api/v1/auth/me
-GET  /api/v1/analytics/overview (owner only)
 ```
 
 `/api/v1/auth/me` expects:

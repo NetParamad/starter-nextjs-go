@@ -22,7 +22,7 @@ src/
   components/
   features/
     auth/
-    dashboard/   # private owner workspace
+    dashboard/   # authenticated workspace
     home/
     shared/
   layouts/
@@ -56,11 +56,6 @@ npm run typecheck
 NEXT_PUBLIC_APP_NAME=Template Next.js Go
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
-NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL=demo@nextjs-go.local
-NEXT_PUBLIC_PLAUSIBLE_DOMAIN=localhost
-NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC=https://plausible.io/js/script.js
-NEXT_PUBLIC_DEMO_EMAIL=demo@nextjs-go.local
-NEXT_PUBLIC_DEMO_PASSWORD=demo12345
 ```
 
 The template now includes:

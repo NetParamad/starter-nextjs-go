@@ -22,22 +22,25 @@
 
 ## ภาพรวม
 
-Template Next.js Go เป็นเทมเพลต monorepo ที่มี frontend Next.js App Router, API Go แบบแยกเลเยอร์ และ PostgreSQL มาพร้อม auth ที่ใช้งานได้จริง แดชบอร์ดแบบ owner-only, API client แบบ contract-first, การพัฒนาในเครื่องผ่าน Docker และชุดตรวจสอบที่พร้อมสำหรับ CI เพื่อให้โปรเจกต์ใหม่เริ่มจากโครง full-stack จริงแทนไดเรกทอรีเปล่า
+Template Next.js Go เป็นเทมเพลต monorepo ระดับ Enterprise ที่มี frontend Next.js App Router, API Go ประสิทธิภาพสูง, PostgreSQL พร้อม PgBouncer และ Kubernetes manifests มาพร้อมระบบ auth หลัก, การจัดการ session บน workspace, API client แบบ contract-first, Security audit log แบบ structured JSON, Prometheus metrics และ CI/CD pipeline ที่ติดตั้ง Trivy container vulnerability scan และการสร้าง SBOM
 
 ทั้งสองแอปใช้คำสั่งระดับ root ร่วมกันและ workflow เดียวกัน `docs/openapi.yaml` เป็น HTTP contract และ type ฝั่ง frontend ถูก generate จากไฟล์นั้น เริ่มจากเทมเพลตนี้แล้วทำตาม [คู่มือเปลี่ยนชื่อ](docs/rename.md) เพื่อ rebrand
 
 ## ฟีเจอร์
 
 - **Monorepo Next.js + Go** — frontend, backend, docs, scripts และ CI อยู่ใน repo เดียวพร้อมการจัดการระดับ root
-- **ขั้นตอน auth ครบ** — สมัครสมาชิก, เข้าสู่ระบบ, ยืนยันอีเมล, รีเซ็ตรหัสผ่าน, refresh และออกจากระบบ
-- **หมุน refresh token แบบมี state** — token ใช้ครั้งเดียวเก็บใน `user_sessions`, ต่ออายุฝั่ง frontend แบบเงียบ, เพิกถอนเมื่อ logout/เปลี่ยนรหัสผ่าน และ access token เก็บในหน่วยความจำ
-- **แดชบอร์ด owner-only** — กำหนดสิทธิ์ด้วย owner email ที่ตั้งไว้ทั้งฝั่ง frontend และ backend
-- **PostgreSQL ผ่าน Docker** — Docker Compose ให้ Postgres ในเครื่อง และมี `prod` profile สำหรับ build image ทั้งสองแอป
+- **Kubernetes Production Manifests** — มาตรฐาน Pod Security ระดับ Enterprise (`deploy/k8s`), Non-root UID 65532, Read-only RootFS, Drop Capabilities, HPA, PDB, Ingress TLS, `/livez`/`/readyz` probes และ `preStop` hooks เพื่อ zero-downtime
+- **ขั้นตอน Auth หลักครบถ้วน** — สมัครสมาชิก, เข้าสู่ระบบ, refresh-token rotation, ออกจากระบบ และดูโปรไฟล์ `/me`
+- **หมุน refresh token แบบมี state** — token ใช้ครั้งเดียวเก็บใน `user_sessions`, ต่ออายุฝั่ง frontend แบบเงียบ, เพิกถอนเมื่อ logout และ access token เก็บในหน่วยความจำ
+- **SOC2/GDPR Audit Trail** — structured JSON audit logging (`backend/internal/audit`) บันทึก actor, action, target, IP และ status
+- **Database Timeouts & PgBouncer** — PostgreSQL statement timeouts (`statement_timeout=5000`) พร้อม PgBouncer connection pooling ใน Docker Compose
+- **Trusted Proxy Rate Limiting** — ดึง IP รองรับทั้ง Cloudflare (`CF-Connecting-IP`), NGINX (`X-Real-IP`, `X-Forwarded-For`) และ fallback ไปยัง TCP RemoteAddr
+- **Observability** — Prometheus metrics (`/metrics`) ตรวจวัดระยะเวลา request, status code และ in-flight requests แบบเรียลไทม์
+- **Supply Chain Security & SBOM** — GitHub Actions CI สแกนช่องโหว่คอนเทนเนอร์ด้วย Trivy และสร้าง SBOM มาตรฐาน SPDX ผ่าน Anchore
 - **API client แบบ contract-first** — `docs/openapi.yaml` generate `frontend/src/generated/openapi.ts` ด้วย `openapi-typescript`
-- **Seed บัญชี demo** — `DEMO_SEED_ENABLED=true` สร้างบัญชีพร้อมใช้สำหรับการพัฒนาในเครื่อง
+- **Type-safe SQL queries** — ใช้ `sqlc` generate query ปลอดภัยระดับ compile-time พร้อม migration ที่ฝังในไบนารีและ CLI แยก (`cmd/migrate`, `cmd/seed`)
 - **ด่านตรวจคุณภาพ** — ESLint, Prettier, TypeScript, Vitest, Playwright, production build, Go test และ Go build
-- **ระบบความปลอดภัยอัตโนมัติ** — GitHub Actions CI, CodeQL สำหรับ JavaScript/TypeScript และ Go, `gitleaks` และ Dependabot
-- **UI แบบ stock shadcn** — ธีม neutral, ฟอนต์ Geist และ light/dark mode ผ่าน `next-themes`
+- **ระบบความปลอดภัยอัตโนมัติ** — GitHub Actions CI, CodeQL สำหรับ JavaScript/TypeScript และ Go, `govulncheck`, `gitleaks` และ Dependabot
 
 ## เทคโนโลยีที่ใช้
 
@@ -46,30 +49,36 @@ Template Next.js Go เป็นเทมเพลต monorepo ที่มี f
 | Frontend                   | [Next.js 16](https://nextjs.org) (App Router, Turbopack) · React 19 · TypeScript 5.9                  |
 | Styling และ UI             | Tailwind CSS 4 · [shadcn/ui](https://ui.shadcn.com) · Geist · `next-themes`                           |
 | State และ data ฝั่ง client | [TanStack Query](https://tanstack.com/query) · [Zustand](https://zustand.docs.pmnd.rs) · Lucide React |
-| Backend                    | [Go 1.25](https://go.dev) — แยกเลเยอร์ `handler` → `service` → `repository`                           |
-| ฐานข้อมูล                  | PostgreSQL (pgx v5) พร้อม SQL migrations                                                              |
-| Auth                       | JWT ผ่าน `golang-jwt/jwt/v5` · แฮชรหัสผ่านด้วย bcrypt                                                 |
+| Backend                    | [Go 1.26](https://go.dev) — แยกเลเยอร์ `handler` → `service` → `repository` + `sqlc`                  |
+| ฐานข้อมูล                  | PostgreSQL 17 (pgx v5) · PgBouncer pooler · Embedded SQL migrations                                   |
+| Auth และ Audit             | JWT ผ่าน `golang-jwt/jwt/v5` · แฮชรหัสผ่านด้วย bcrypt · Structured JSON audit logger                  |
 | API contract               | OpenAPI 3.1 (`docs/openapi.yaml`) → `openapi-typescript`                                              |
-| Observability              | Prometheus metrics (`/metrics`) · Tracing (`X-Request-ID`)                                            |
+| Observability              | Prometheus metrics (`/metrics`) · Tracing (`X-Request-ID`) · Probes (`/livez`, `/readyz`, `/health`)  |
+| Deployment                 | Kubernetes manifests (`deploy/k8s` รองรับ HPA, PDB, Ingress) · Multi-stage Dockerfiles                |
 | การทดสอบ                   | [Vitest](https://vitest.dev) + Testing Library · [Playwright](https://playwright.dev)                 |
 | เครื่องมือ                 | ESLint · Prettier · Husky · lint-staged · golangci-lint · Docker Compose                              |
-| CI และความปลอดภัย          | GitHub Actions · `govulncheck` · `npm audit` · CodeQL · `gitleaks`                                    |
-| Runtime                    | Node `>=22.23.4` (`.nvmrc` `24.22.1`) · Go 1.25.1 · image `node:24.22.1-alpine`                       |
+| CI และความปลอดภัย          | GitHub Actions · Trivy · Anchore SBOM · `govulncheck` · `npm audit` · CodeQL · `gitleaks`             |
+| Runtime                    | Node `>=22.23.4` (`.nvmrc` `24.22.1`) · Go 1.26.10 · image `node:24.22.1-alpine`                      |
 
 ## โครงสร้างโปรเจกต์
 
 ```text
 .
 ├── backend/
-│   ├── cmd/api/              # entrypoint main.go
+│   ├── cmd/
+│   │   ├── api/              # entrypoint main.go
+│   │   ├── migrate/          # CLI สำหรับจัดการ database migration
+│   │   └── seed/             # CLI สำหรับ seed ข้อมูลฐานข้อมูล
 │   ├── internal/
+│   │   ├── audit/            # ระบบบันทึก security audit logging
 │   │   ├── config/           # โหลด env + ตรวจสอบฝั่ง production
 │   │   ├── domain/           # โมเดลโดเมน
 │   │   ├── handler/http/     # HTTP handlers
-│   │   ├── repository/       # เข้าถึง pgx + sqlc queries
-│   │   ├── server/           # router, middleware, rate limiting
+│   │   ├── repository/       # เข้าถึง pgx + sqlc generated queries
+│   │   ├── server/           # router, metrics, probes, rate limiting
 │   │   └── service/          # business logic
 │   ├── migrations/           # SQL migrations ที่ฝังในไบนารี (up/down)
+│   ├── sqlc.yaml             # การตั้งค่า sqlc
 │   ├── Makefile
 │   └── Dockerfile
 ├── frontend/
@@ -83,12 +92,14 @@ Template Next.js Go เป็นเทมเพลต monorepo ที่มี f
 │   │   └── types/            # TypeScript types ร่วม
 │   ├── e2e/                  # Playwright specs
 │   └── Dockerfile
+├── deploy/
+│   └── k8s/                  # Kubernetes production manifests (HPA, PDB, Ingress)
 ├── docs/                     # openapi.yaml + คู่มือโปรเจกต์
 ├── scripts/                  # dev, check, e2e, contract, secrets
-├── compose.yml               # PostgreSQL + prod profile (ไม่บังคับ)
+├── compose.yml               # PostgreSQL + PgBouncer + prod profile
 ├── package.json              # สคริปต์ root + เครื่องมือ OpenAPI
 ├── .nvmrc
-└── .github/                  # CI, E2E, CodeQL, Dependabot
+└── .github/                  # CI (Trivy, SBOM), E2E, CodeQL, Dependabot
 ```
 
 ## การตั้งค่าในเครื่อง
@@ -161,52 +172,43 @@ cd backend && cp .env.example .env && go run ./cmd/api
 
 ### Backend (`backend/.env`)
 
-| ตัวแปร                                             | จำเป็น      | หมายเหตุ                                                       |
-| -------------------------------------------------- | ----------- | -------------------------------------------------------------- |
-| `APP_NAME` / `APP_ENV`                             | ไม่บังคับ   | ค่าเริ่มต้น `Template Next.js Go API` / `development`          |
-| `APP_PORT` / `APP_HOST`                            | ไม่บังคับ   | ค่าเริ่มต้น `8080` / `0.0.0.0`; รองรับ `PORT` ของแพลตฟอร์มด้วย |
-| `APP_BASE_URL` / `FRONTEND_APP_URL`                | ไม่บังคับ   | origin ของ API และ frontend ที่ใช้ในอีเมล                      |
-| `CORS_ALLOWED_ORIGINS`                             | ✅          | ต้องมี origin ของ frontend                                     |
-| `DATABASE_URL`                                     | production  | ใช้ก่อนเมื่อตั้งค่าไว้; ถ้าไม่ตั้งจะใช้ `DB_*`                 |
-| `DB_HOST` / `DB_PORT` / `DB_NAME`                  | local       | ค่าเริ่มต้น `localhost` / `5432` / `app_db`                    |
-| `DB_USER` / `DB_PASSWORD`                          | local       | ค่าเริ่มต้น `postgres` / `postgres`; ตัวอย่างใช้ `db_password` |
-| `DB_SSLMODE` / `DB_SCHEMA`                         | local       | ค่าเริ่มต้น `disable` / `public`                               |
-| `JWT_ACCESS_SECRET`                                | ✅          | ต้องเปลี่ยนเป็นค่าจริงใน production                            |
-| `JWT_REFRESH_SECRET`                               | ✅          | ต้องเปลี่ยนเป็นค่าจริงใน production                            |
-| `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_HOURS` | ไม่บังคับ   | ค่าเริ่มต้น `15` / `720`                                       |
-| `MAIL_FROM` / `RESEND_API_KEY`                     | สำหรับอีเมล | ผู้ส่ง + คีย์ Resend สำหรับอีเมลยืนยัน/รีเซ็ต                  |
-| `SMTP_HOST` / `SMTP_PORT`                          | ไม่บังคับ   | SMTP ทางเลือกสำรอง; พอร์ตเริ่มต้น `587`                        |
-| `SMTP_USER` / `SMTP_PASS`                          | ไม่บังคับ   | ข้อมูลรับรอง SMTP                                              |
-| `ANALYTICS_PROVIDER`                               | ไม่บังคับ   | ตัวอย่างใช้ `plausible`                                        |
-| `DASHBOARD_OWNER_EMAIL`                            | owner flows | ตรวจสิทธิ์เจ้าของฝั่ง backend                                  |
-| `PLAUSIBLE_BASE_URL`                               | ไม่บังคับ   | ค่าเริ่มต้น `https://plausible.io`                             |
-| `PLAUSIBLE_SITE_ID` / `PLAUSIBLE_API_TOKEN`        | ไม่บังคับ   | site identifier + API token ฝั่งเซิร์ฟเวอร์                    |
-| `DEMO_SEED_ENABLED`                                | local       | เปิดการ seed ผู้ใช้ demo                                       |
-| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD`           | local       | ค่าเริ่มต้น `demo@nextjs-go.local` / `demo12345`               |
-| `DEMO_USER_USERNAME` / `DEMO_USER_FULL_NAME`       | local       | ค่าเริ่มต้น `nextjs-go-demo` / `Next.js Go Demo`               |
+| ตัวแปร                                             | จำเป็น     | หมายเหตุ                                                       |
+| -------------------------------------------------- | ---------- | -------------------------------------------------------------- |
+| `APP_NAME` / `APP_ENV`                             | ไม่บังคับ  | ค่าเริ่มต้น `Template Next.js Go API` / `development`          |
+| `APP_PORT` / `APP_HOST`                            | ไม่บังคับ  | ค่าเริ่มต้น `8080` / `0.0.0.0`; รองรับ `PORT` ของแพลตฟอร์มด้วย |
+| `APP_BASE_URL` / `FRONTEND_APP_URL`                | ไม่บังคับ  | origin ของ API และ frontend                                    |
+| `CORS_ALLOWED_ORIGINS`                             | ✅         | ต้องมี origin ของ frontend                                     |
+| `DATABASE_URL`                                     | production | ใช้ก่อนเมื่อตั้งค่าไว้; ถ้าไม่ตั้งจะใช้ `DB_*`                 |
+| `DB_HOST` / `DB_PORT` / `DB_NAME`                  | local      | ค่าเริ่มต้น `localhost` / `5432` / `app_db`                    |
+| `DB_USER` / `DB_PASSWORD`                          | local      | ค่าเริ่มต้น `postgres` / `postgres`; ตัวอย่างใช้ `db_password` |
+| `DB_SSLMODE` / `DB_SCHEMA`                         | local      | ค่าเริ่มต้น `disable` / `public`                               |
+| `JWT_ACCESS_SECRET`                                | ✅         | ต้องเปลี่ยนเป็นค่าจริงใน production                            |
+| `JWT_REFRESH_SECRET`                               | ✅         | ต้องเปลี่ยนเป็นค่าจริงใน production                            |
+| `JWT_ACCESS_TTL_MINUTES` / `JWT_REFRESH_TTL_HOURS` | ไม่บังคับ  | ค่าเริ่มต้น `15` / `720`                                       |
+| `DEMO_SEED_ENABLED`                                | local      | เปิดการ seed ผู้ใช้ demo                                       |
+| `DEMO_USER_EMAIL` / `DEMO_USER_PASSWORD`           | local      | ค่าเริ่มต้น `demo@nextjs-go.local` / `demo12345`               |
+| `DEMO_USER_USERNAME` / `DEMO_USER_FULL_NAME`       | local      | ค่าเริ่มต้น `nextjs-go-demo` / `Next.js Go Demo`               |
 
 ### Frontend (`frontend/.env.local`)
 
-| ตัวแปร                                                              | จำเป็น      | หมายเหตุ                                                    |
-| ------------------------------------------------------------------- | ----------- | ----------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_APP_URL`                      | ไม่บังคับ   | ค่าเริ่มต้น `Template Next.js Go` / `http://localhost:3000` |
-| `NEXT_PUBLIC_API_BASE_URL`                                          | ✅          | base ของ API เช่น `http://localhost:8080/api/v1`            |
-| `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL`                                 | owner flows | ตรวจสิทธิ์เจ้าของฝั่ง frontend                              |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC` | ไม่บังคับ   | domain + URL สคริปต์ของ Plausible                           |
-| `NEXT_PUBLIC_DEMO_EMAIL` / `NEXT_PUBLIC_DEMO_PASSWORD`              | local       | ข้อมูลรับรอง demo ที่แสดงบนหน้า login                       |
+| ตัวแปร                                         | จำเป็น    | หมายเหตุ                                                    |
+| ---------------------------------------------- | --------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_NAME` / `NEXT_PUBLIC_APP_URL` | ไม่บังคับ | ค่าเริ่มต้น `Template Next.js Go` / `http://localhost:3000` |
+| `NEXT_PUBLIC_API_BASE_URL`                     | ✅        | base ของ API เช่น `http://localhost:8080/api/v1`            |
 
 ### Docker Compose (shell / `.env`)
 
 | ตัวแปร                           | จำเป็น       | หมายเหตุ                                                         |
 | -------------------------------- | ------------ | ---------------------------------------------------------------- |
 | `BACKEND_PORT` / `FRONTEND_PORT` | ไม่บังคับ    | พอร์ต host ของ API/แอป ค่าเริ่มต้น `8080` / `3000`               |
+| `PGBOUNCER_PORT`                 | ไม่บังคับ    | พอร์ต host ของ PgBouncer ค่าเริ่มต้น `6432`                      |
 | `NEXT_PUBLIC_API_BASE_URL`       | prod profile | URL ของ API ตอน build ค่าเริ่มต้น `http://localhost:8080/api/v1` |
 
 ## วิธีใช้งาน
 
 1. เปิดหน้า landing ที่ `http://localhost:3000`
 2. สมัครบัญชี หรือเข้าสู่ระบบด้วยบัญชี demo ที่ seed ไว้เมื่อ `DEMO_SEED_ENABLED=true`
-3. เข้าสู่แดชบอร์ด ซึ่งเห็นได้เฉพาะเจ้าของที่กำหนดผ่าน `DASHBOARD_OWNER_EMAIL` และ `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL`
+3. เข้าสู่แดชบอร์ดที่ผ่านการยืนยันตัวตนเพื่อตรวจสอบข้อมูล session และสถานะความปลอดภัย
 4. เปลี่ยน branding และข้อความหน้า landing ที่ `frontend/src/lib/site-copy.ts`; ทำตาม [คู่มือเปลี่ยนชื่อ](docs/rename.md) สำหรับ rebrand ทั้งหมด
 5. เปลี่ยน route หรือ payload ของ API ใน `docs/openapi.yaml` แล้วรัน `npm run api:types` และ `npm run check:contract`
 

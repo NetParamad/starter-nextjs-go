@@ -84,7 +84,6 @@ function createSmokeBackendEnv({
     DB_PASSWORD: "db_password",
     DB_SSLMODE: "disable",
     DB_SCHEMA: "public",
-    DASHBOARD_OWNER_EMAIL: "demo@nextjs-go.local",
     DEMO_SEED_ENABLED: "true",
     DEMO_USER_EMAIL: "demo@nextjs-go.local",
     DEMO_USER_PASSWORD: "demo12345",
@@ -99,11 +98,6 @@ function createSmokeFrontendEnv({ backendBaseUrl }) {
     NEXT_PUBLIC_APP_URL:
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
     NEXT_PUBLIC_API_BASE_URL: `${backendBaseUrl}/api/v1`,
-    NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL: "demo@nextjs-go.local",
-    NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "",
-    NEXT_PUBLIC_PLAUSIBLE_SCRIPT_SRC: "",
-    NEXT_PUBLIC_DEMO_EMAIL: "demo@nextjs-go.local",
-    NEXT_PUBLIC_DEMO_PASSWORD: "demo12345",
   };
 }
 
@@ -361,9 +355,20 @@ async function main() {
   // NOTE: the nested standalone tree ships no static assets; sync them in so
   // the server can serve /_next/static/* by itself.
   console.log("Syncing static assets into the standalone server...");
-  cpSync(path.join(frontendDir, ".next", "static"), path.join(frontendDir, ".next", "standalone", "frontend", ".next", "static"), {
-    recursive: true,
-  });
+  cpSync(
+    path.join(frontendDir, ".next", "static"),
+    path.join(
+      frontendDir,
+      ".next",
+      "standalone",
+      "frontend",
+      ".next",
+      "static",
+    ),
+    {
+      recursive: true,
+    },
+  );
 
   const frontendChild = runBackground("node", [standaloneServer], {
     cwd: frontendDir,

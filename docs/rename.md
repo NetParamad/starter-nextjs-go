@@ -37,15 +37,12 @@ Conventions used below:
   and `backend/internal/service/health_service_test.go`
 - Verify: `rg '<Old Name>' frontend backend docs scripts`
 
-## 4. Demo and owner emails
+## 4. Demo emails
 
-- `frontend/.env.example` — `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL`,
-  `NEXT_PUBLIC_DEMO_EMAIL`
-- `backend/.env.example` — `DASHBOARD_OWNER_EMAIL`, `DEMO_USER_EMAIL`
-- `frontend/Dockerfile` — the same two `ARG`s
+- `backend/.env.example` — `DEMO_USER_EMAIL`
 - Code fallbacks: `backend/internal/config/config.go`
   (`DEMO_USER_EMAIL` default), `scripts/e2e.mjs`
-  (`DASHBOARD_OWNER_EMAIL`, `DEMO_USER_EMAIL`, `PLAYWRIGHT_DEMO_EMAIL`),
+  (`DEMO_USER_EMAIL`, `PLAYWRIGHT_DEMO_EMAIL`),
   `frontend/e2e/smoke.spec.ts` (`demoEmail` default)
 - Docs: root `README.md` demo account section
 - After changing: reseed the dev database once —

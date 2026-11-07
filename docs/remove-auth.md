@@ -23,11 +23,9 @@ accounts, remove auth in this order. Each step keeps `npm run check` and
    ```
    The API will automatically embed and run it on next boot.
 6. Remove auth env from `backend/.env.example` (`JWT_*`,
-   `DEMO_*`, `DASHBOARD_OWNER_EMAIL`) and the
+   `DEMO_*`) and the
    `ValidateProduction` JWT check in
    `backend/internal/config/config.go` if it no longer applies.
-7. Adapt or delete the analytics owner route in `router.go`
-   (`ownerOnlyMiddleware` depends on authenticated users).
 
 ## Frontend
 
@@ -38,12 +36,9 @@ accounts, remove auth in this order. Each step keeps `npm run check` and
 4. In `frontend/src/components/site-header.tsx` and
    `frontend/src/components/mobile-bottom-nav.tsx`, remove the
    session hooks, login/signup buttons, and logout actions.
-5. Remove auth env from `frontend/.env.example`
-   (`NEXT_PUBLIC_API_BASE_URL` stays if you keep the Go API,
-   `NEXT_PUBLIC_DASHBOARD_OWNER_EMAIL` and `NEXT_PUBLIC_DEMO_*` go).
-6. Update `frontend/e2e/smoke.spec.ts`: drop the login test and any
-   dashboard-owner assertions; keep the public-pages test.
-7. Delete auth types from `frontend/src/types/auth.ts` (or the file).
+5. Update `frontend/e2e/smoke.spec.ts`: drop the login test and
+   dashboard assertions; keep the public-pages test.
+6. Delete auth types from `frontend/src/types/auth.ts` (or the file).
 
 ## Contract
 

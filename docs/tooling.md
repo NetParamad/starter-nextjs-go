@@ -14,21 +14,25 @@ The short answer:
 
 These are already part of the current starter or its immediate UI architecture.
 
-| Tool | Status | What it is good for | Notes |
-| --- | --- | --- | --- |
-| Next.js 16 | Installed | app routing, rendering, server/client composition | core frontend framework |
-| React 19 | Installed | UI composition and app behavior | pairs with the App Router setup |
-| Tailwind CSS 4 | Installed | fast, consistent styling | theme tokens live in `frontend/src/app/globals.css` |
-| shadcn/ui pattern | Installed pattern | accessible, editable UI components | ideal for building your own system, not depending on a sealed package |
-| Radix UI primitives | Installed | accessible low-level UI behavior | currently used for labels and slots |
-| Lucide React | Installed | clean icon set | best for most app UI icons |
-| TanStack Query | Installed | server state, caching, request lifecycle | use for API-backed screens |
-| Zustand | Installed | lightweight client state | good for local app state like auth/session UI state |
-| class-variance-authority | Installed | variant-driven component styling | useful for reusable design-system components |
-| tailwind-merge + clsx | Installed | safe class composition | helps keep component styles maintainable |
-| Vitest + Testing Library | Installed | unit/component testing | use for frontend behavior tests |
-| Playwright | Installed | end-to-end browser coverage | root `npm run e2e` boots the full stack |
-| openapi-typescript | Installed (root) | OpenAPI-to-TypeScript types | `npm run api:types`, drift-checked by `npm run check:contract` |
+| Tool                     | Status            | What it is good for                               | Notes                                                                 |
+| ------------------------ | ----------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
+| Next.js 16               | Installed         | app routing, rendering, server/client composition | core frontend framework                                               |
+| React 19                 | Installed         | UI composition and app behavior                   | pairs with the App Router setup                                       |
+| Tailwind CSS 4           | Installed         | fast, consistent styling                          | theme tokens live in `frontend/src/app/globals.css`                   |
+| shadcn/ui pattern        | Installed pattern | accessible, editable UI components                | ideal for building your own system, not depending on a sealed package |
+| Radix UI primitives      | Installed         | accessible low-level UI behavior                  | currently used for labels and slots                                   |
+| Lucide React             | Installed         | clean icon set                                    | best for most app UI icons                                            |
+| TanStack Query           | Installed         | server state, caching, request lifecycle          | use for API-backed screens                                            |
+| Zustand                  | Installed         | lightweight client state                          | good for local app state like auth/session UI state                   |
+| class-variance-authority | Installed         | variant-driven component styling                  | useful for reusable design-system components                          |
+| tailwind-merge + clsx    | Installed         | safe class composition                            | helps keep component styles maintainable                              |
+| Vitest + Testing Library | Installed         | unit/component testing                            | use for frontend behavior tests                                       |
+| Playwright               | Installed         | end-to-end browser coverage                       | root `npm run e2e` boots the full stack                               |
+| openapi-typescript       | Installed (root)  | OpenAPI-to-TypeScript types                       | `npm run api:types`, drift-checked by `npm run check:contract`        |
+| sqlc                     | Installed         | compile-time type-safe Go SQL queries             | `backend/sqlc.yaml`, queries in `backend/internal/repository/db`      |
+| Prometheus               | Installed         | HTTP metrics and operational observability        | endpoint at `/metrics`                                                |
+| Kubernetes               | Configured        | cloud-native production deployment manifests      | production manifests in `deploy/k8s`                                  |
+| Trivy & Anchore          | Configured        | container image vulnerability scanning and SBOM   | integrated in GitHub Actions CI pipeline                              |
 
 ## Best Optional Additions
 
