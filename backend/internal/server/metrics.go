@@ -13,10 +13,10 @@ import (
 )
 
 type Metrics struct {
-	Registry        *prometheus.Registry
-	httpRequests    *prometheus.CounterVec
-	httpDuration    *prometheus.HistogramVec
-	inflight        prometheus.Gauge
+	Registry     *prometheus.Registry
+	httpRequests *prometheus.CounterVec
+	httpDuration *prometheus.HistogramVec
+	inflight     prometheus.Gauge
 }
 
 func NewMetrics(db *pgxpool.Pool) *Metrics {
